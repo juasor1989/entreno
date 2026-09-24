@@ -263,6 +263,7 @@ function defaultState(){
   return{v:1,updatedAt:0,
     settings:{startDate:today(),days:[1,2,4,5],t:{kcal:2350,prot:165,carb:265,fat:70,water:2.5,steps:9000,sleep:7.5}},
     sessions:[],
+    templates:[],
     body:[],
     days:{},draft:null};
 }
@@ -271,7 +272,7 @@ function migrate(s){
   s=s||d;
   s.settings=Object.assign({},d.settings,s.settings||{});
   s.settings.t=Object.assign({},d.settings.t,(s.settings&&s.settings.t)||{});
-  s.sessions=s.sessions||[];s.body=s.body||[];s.days=s.days||{};
+  s.sessions=s.sessions||[];s.templates=s.templates||[];s.body=s.body||[];s.days=s.days||{};
   if(s.draft===undefined)s.draft=null;
   return s;
 }
@@ -287,7 +288,7 @@ function persist(){
 }
 
 /* ---------- UI state ---------- */
-const ui={tab:'sesion',type:null,time:null,ex:null,day:null,arm:null,bdate:null};
+const ui={tab:'sesion',type:null,time:null,ex:null,day:null,arm:null,bdate:null,lib:{q:'',g:'',eq:''}};
 let tt;
 function toast(m){const el=$('#toast');el.textContent=m;el.classList.add('on');clearTimeout(tt);tt=setTimeout(()=>el.classList.remove('on'),2400)}
 
@@ -302,6 +303,18 @@ function schedule(nWeeks){
     out.push({w:w,ws:ws,list:list});
   }
   return out;
+}
+let EXDB=[],exdbReady=false;
+const EQLIST=['Sin material','Máquina','Mancuernas','Barra','Polea','Kettlebell','Bandas','Fitball','Balón medicinal','Barra Z','Foam roller','Otro'];
+const norm=s=>String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+function loadExDB(){
+  try{const c=localStorage.getItem('diario-exdb-v1');if(c){const j=JSON.parse(c);if(j&&j.length){EXDB=j;exdbReady=true}}}catch(e){}
+  try{
+    if(typeof fetch!=='function')return;
+    fetch('exercises.json').then(r=>r.ok?r.json():null).then(j=>{
+      if(j&&j.length){EXDB=j;exdbReady=true;try{localStorage.setItem('diario-exdb-v1',JSON.stringify(j))}catch(e){}if(state.draft)render()}
+    }).catch(()=>{});
+  }catch(e){}
 }
 function lastFor(id){
   for(let i=state.sessions.length-1;i>=0;i--){
@@ -329,12 +342,18 @@ function suggest(id,reps,rir){
   }
   return{kg:kg,last:last,text:'Mantén '+fmt(kg,2)+' kg y busca +1 repetición por serie (tope '+hi+').'};
 }
-function mkEx(e,w,rir){
-  const n=setsFor(e,w);
+function mkExN(e,n,rir){
   const sg=suggest(e.id,e.reps,rir);
   const kg=sg.kg!=null?String(sg.kg).replace('.',','):'';
   return{id:e.id,name:e.name,g:e.g,reps:e.reps,rest:e.rest,k:e.k,note:'',
     sets:Array.from({length:n},()=>({kg:kg,reps:'',done:false}))};
+}
+function mkEx(e,w,rir){return mkExN(e,setsFor(e,w),rir)}
+function startManual(name,fromTpl){
+  const t=today();
+  state.draft={id:uid(),date:t,type:'MANUAL',name:name||'Sesión manual',time:ui.time||(new Date().getHours()<14?'10:00':'18:00'),
+    startedAt:Date.now(),notes:'',rpe:'',dur:'',exercises:fromTpl||[]};
+  persist();render();window.scrollTo(0,0);
 }
 function startSession(type,time){
   const t=today(),w=weekOf(t),ph=phaseOf(w);
@@ -348,7 +367,7 @@ function finishSession(){
     sets:e.sets.map(s=>({kg:num(s.kg),reps:num(s.reps)})).filter(s=>s.reps>0&&s.kg!=null)})).filter(e=>e.sets.length);
   if(!exs.length){toast('Anota al menos una serie con peso y repeticiones');return}
   const el=Math.max(1,Math.round((Date.now()-d.startedAt)/60000));
-  state.sessions.push({id:d.id,date:d.date,type:d.type,time:d.time,week:weekOf(d.date),
+  state.sessions.push({id:d.id,date:d.date,type:d.type,name:d.name||null,time:d.time,week:weekOf(d.date),
     dur:num(d.dur)!=null?num(d.dur):Math.min(el,300),rpe:num(d.rpe),notes:d.notes,exercises:exs});
   state.sessions.sort((a,b)=>a.date===b.date?0:(a.date<b.date?-1:1));
   state.draft=null;ui.type=null;ui.arm=null;
@@ -490,6 +509,34 @@ function liveInner(){
 }
 function updateLive(){const el=$('#live');if(el&&state.draft)el.innerHTML=liveInner()}
 
+/* ---------- biblioteca de ejercicios ---------- */
+function libRow(ex){
+  const tag=ex.k==='b'?'Básico':ex.k==='i'?'Aislamiento':'';
+  return '<div class="card" style="padding:10px;margin:8px 0"><div class="row sp" style="align-items:flex-start"><b style="font-family:inherit;font-weight:600">'+esc(ex.name)+'</b>'
+    +'<button type="button" class="btn ghost sm" data-act="addlibex" data-id="'+esc(ex.id)+'">+ Añadir</button></div>'
+    +'<div class="sub">'+esc(ex.g.join(', '))+' · '+esc(ex.eq)+(tag?' · '+tag:'')+(ex.lvl?' · '+esc(ex.lvl):'')+'</div>'
+    +(ex.ins&&ex.ins.length?'<details><summary>Ejecución (en inglés)</summary><p class="sub">'+esc(ex.ins.join(' '))+'</p></details>':'')+'</div>';
+}
+function vLib(){
+  const L=ui.lib;
+  let h='<div class="grid2"><div class="f" style="grid-column:1/-1"><label for="libq">Buscar</label><input id="libq" data-c="libq" value="'+esc(L.q)+'" placeholder="Ej. press banca, curl, zancada…" style="font-family:inherit;font-weight:500"></div>'
+    +'<div class="f"><label for="libg">Grupo</label><select id="libg" data-c="libg" style="font-family:inherit;font-weight:500"><option value="">Todos</option>'+GROUPS.map(x=>'<option'+(x===L.g?' selected':'')+'>'+esc(x)+'</option>').join('')+'</select></div>'
+    +'<div class="f"><label for="libeq">Material</label><select id="libeq" data-c="libeq" style="font-family:inherit;font-weight:500"><option value="">Todos</option>'+EQLIST.map(x=>'<option'+(x===L.eq?' selected':'')+'>'+esc(x)+'</option>').join('')+'</select></div></div>';
+  if(!exdbReady){h+='<p class="empty">Cargando la base de datos de ejercicios (hace falta conexión la primera vez)…</p>';return h}
+  const words=norm(L.q).split(/\s+/).filter(Boolean);
+  let res=EXDB.filter(e=>{
+    if(L.g&&e.g.indexOf(L.g)<0)return false;
+    if(L.eq&&e.eq!==L.eq)return false;
+    if(!words.length)return true;
+    const hay=norm(e.name+' '+e.en);
+    return words.every(w=>hay.indexOf(w)>=0);
+  });
+  const total=res.length;res=res.slice(0,25);
+  h+='<p class="sub">'+total+' resultados'+(total>25?' · se muestran los primeros 25, afina la búsqueda':'')+'</p>';
+  h+=res.length?res.map(libRow).join(''):'<p class="empty">Sin resultados con esos filtros.</p>';
+  return h;
+}
+
 /* ---------- vistas: sesión ---------- */
 const CHK='<svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
 function seg(k,opts,cur){
@@ -519,6 +566,12 @@ function vStart(){
   h+='<details class="card"><summary>Ejercicios de hoy ('+plan.ex.length+')</summary><table><tbody>'
     +plan.ex.map(e=>'<tr><td>'+esc(e.name)+'</td><td class="num" style="text-align:right;white-space:nowrap">'+setsFor(e,w)+' × '+e.reps[0]+'-'+e.reps[1]+'</td></tr>').join('')+'</tbody></table></details>';
   h+='<button type="button" class="btn block" data-act="start" style="margin-top:6px">Empezar sesión</button>';
+  h+='<button type="button" class="btn ghost block" data-act="manual" style="margin-top:8px">+ Sesión manual (elige tú los ejercicios)</button>';
+  if(state.templates.length){
+    h+='<div class="sec">Tus plantillas</div>'+state.templates.map(x=>
+      '<div class="vrow"><span>'+esc(x.name)+' <span class="sub">'+x.exercises.length+' ejercicios</span></span>'
+      +'<span class="row" style="gap:6px"><button type="button" class="btn ghost sm" data-act="starttpl" data-id="'+x.id+'">Empezar</button>'+armBtn('warn sm','deltpl',x.id,'Borrar','¿Seguro?')+'</span></div>').join('');
+  }
   const doneDates={};state.sessions.forEach(x=>{doneDates[x.date]=1});
   const up=[].concat.apply([],schedule(w+2).map(x=>x.list.map(y=>({date:y.date,type:y.type,w:x.w})))).filter(y=>y.date>=t).slice(0,4);
   if(up.length){
@@ -528,7 +581,7 @@ function vStart(){
     h+='<div class="sec">Últimas sesiones</div>';
     h+=state.sessions.slice(-6).reverse().map(s=>{
       const sets=s.exercises.reduce((a,e)=>a+e.sets.length,0);
-      return '<details class="hist"><summary>'+esc(fmtDate(s.date))+' · '+esc((PLAN[s.type]||{name:s.type}).name)+' · '+sets+' series'+(s.dur?' · '+s.dur+' min':'')+'</summary><ul>'
+      return '<details class="hist"><summary>'+esc(fmtDate(s.date))+' · '+esc((PLAN[s.type]||{name:s.name||s.type}).name)+' · '+sets+' series'+(s.dur?' · '+s.dur+' min':'')+'</summary><ul>'
         +s.exercises.map(e=>'<li><b>'+esc(e.name)+'</b>: '+e.sets.map(x=>fmt(x.kg,2)+'×'+fmt(x.reps,0)).join(', ')+'</li>').join('')
         +(s.rpe?'<li>Esfuerzo global: '+fmt(s.rpe,0)+'/10</li>':'')+(s.notes?'<li>'+esc(s.notes)+'</li>':'')+'</ul>'
         +'<div style="margin-bottom:10px">'+armBtn('warn sm','delsess',s.id,'Borrar sesión','¿Seguro? Toca otra vez')+'</div></details>';
@@ -538,7 +591,7 @@ function vStart(){
 }
 
 function vDraft(){
-  const d=state.draft,w=weekOf(d.date),ph=phaseOf(w),plan=PLAN[d.type];
+  const d=state.draft,w=weekOf(d.date),ph=phaseOf(w),plan=PLAN[d.type]||{name:d.name||'Sesión manual',focus:'Elegida por ti'};
   let h='<div class="hero-s"><div><div class="sub">Semana '+w+' · '+ph.n+'</div><div class="big num">'+esc(plan.name)+'</div><div class="sub">'+esc(plan.focus)+' · '+esc(d.time)+' h</div></div>'
     +'<div class="clock"><span id="elapsed" class="num">0 min</span><small>en marcha</small></div></div>';
   h+='<div class="rirline">Termina cada serie con <b>'+ph.rir+'</b> repeticiones en recámara (RIR '+ph.rir+'). El fallo solo en la última serie de aislamientos.</div>';
@@ -558,13 +611,15 @@ function vDraft(){
     h+='<div class="exa"><button type="button" class="btn ghost sm" data-act="addset">+ Serie</button><button type="button" class="btn ghost sm" data-act="rmset">− Serie</button></div>'
       +'<details><summary>Nota del ejercicio</summary><input class="note-in" data-f="exnote" value="'+esc(e.note)+'" placeholder="Ajuste de máquina, molestias, técnica…" maxlength="160"></details></section>';
   });
-  h+='<details class="card"><summary>+ Añadir ejercicio</summary><div class="f"><label for="newex">Nombre</label><input id="newex" maxlength="60" placeholder="Ej. Curl martillo" style="font-family:inherit;font-weight:500"></div>'
+  h+='<details class="card" open><summary>+ Añadir ejercicio</summary>'+vLib()
+    +'<details style="margin-top:10px"><summary>¿No lo encuentras? Añádelo tú mismo</summary><div class="f"><label for="newex">Nombre</label><input id="newex" maxlength="60" placeholder="Ej. Curl martillo" style="font-family:inherit;font-weight:500"></div>'
     +'<div class="f"><label for="newg">Grupo</label><select id="newg" style="font-family:inherit;font-weight:500">'+GROUPS.map(g=>'<option>'+g+'</option>').join('')+'</select></div>'
-    +'<button type="button" class="btn ghost sm" data-act="addex">Añadir</button></details>';
+    +'<button type="button" class="btn ghost sm" data-act="addex">Añadir</button></details></details>';
   const el=Math.min(300,Math.max(1,Math.round((Date.now()-d.startedAt)/60000)));
   h+='<div class="sec">Cerrar sesión</div><div class="grid2"><div class="f"><label for="ddur">Duración (min)</label><input id="ddur" data-f="ddur" inputmode="numeric" value="'+esc(d.dur!==''?d.dur:el)+'"></div>'
     +'<div class="f"><label for="drpe">Esfuerzo global (1-10)</label><input id="drpe" data-f="drpe" inputmode="numeric" value="'+esc(d.rpe)+'" placeholder="7"></div></div>'
     +'<div class="f"><label for="dnotes">Sensaciones, sueño, energía</label><textarea id="dnotes" class="txt" data-f="dnotes" maxlength="400">'+esc(d.notes)+'</textarea></div>'
+    +'<details class="card"><summary>Guardar como plantilla</summary><div class="f"><label for="tplname">Nombre de la plantilla</label><input id="tplname" maxlength="40" placeholder="Ej. Brazo extra" style="font-family:inherit;font-weight:500"></div><button type="button" class="btn ghost sm" data-act="savetpl">Guardar plantilla</button></details>'
     +'<button type="button" class="btn block" data-act="finish">Guardar sesión</button>'
     +'<div style="margin-top:10px">'+armBtn('warn sm','discard','','Descartar sesión','¿Seguro? Toca otra vez')+'</div>';
   return h;
@@ -739,7 +794,7 @@ function doExport(w){
   if(w==='json')return exportFile('diario-entreno-copia.json',JSON.stringify(state,null,1));
   if(w==='sess'){
     const r=[['fecha','sesion','semana','ejercicio','serie','kg','reps']];
-    state.sessions.forEach(s=>s.exercises.forEach(e=>e.sets.forEach((x,i)=>r.push([s.date,(PLAN[s.type]||{name:s.type}).name,s.week,e.name,i+1,x.kg,x.reps]))));
+    state.sessions.forEach(s=>s.exercises.forEach(e=>e.sets.forEach((x,i)=>r.push([s.date,(PLAN[s.type]||{name:s.name||s.type}).name,s.week,e.name,i+1,x.kg,x.reps]))));
     return exportFile('sesiones.csv','\ufeff'+r.map(a=>a.map(csvCell).join(',')).join('\n'));
   }
   const r=[['fecha','peso_kg','cintura_cm','grasa_pct','visceral','musculo_kg','agua_pct','nota']];
@@ -792,7 +847,30 @@ const ACT={
   dayset(b){const d=+b.dataset.d,a=(state.settings.days||[1,2,4,5]).slice(),i=a.indexOf(d);
     if(i>=0){if(a.length===1){toast('Deja al menos un día');return}a.splice(i,1)}else a.push(d);
     a.sort((x,y)=>x-y);state.settings.days=a;persist();render()},
-  reset(){state=migrate(null);state.updatedAt=Date.now();ui.arm=null;persist();render();toast('Datos borrados')}
+  reset(){state=migrate(null);state.updatedAt=Date.now();ui.arm=null;persist();render();toast('Datos borrados')},
+  manual(){startManual()},
+  starttpl(b){
+    const tpl=state.templates.find(x=>x.id===b.dataset.id);if(!tpl)return;
+    const ph=phaseOf(weekOf(today()));
+    startManual(tpl.name,tpl.exercises.map(e=>mkExN(e,e.sets,ph.rir)));
+  },
+  deltpl(b){state.templates=state.templates.filter(x=>x.id!==b.dataset.id);ui.arm=null;persist();render()},
+  savetpl(){
+    const n=($('#tplname').value||'').trim();if(!n){toast('Ponle un nombre a la plantilla');return}
+    const exs=state.draft.exercises.map(e=>({id:e.id,name:e.name,g:e.g,reps:e.reps,rest:e.rest,k:e.k,sets:e.sets.length}));
+    state.templates.push({id:uid(),name:n,exercises:exs});
+    persist();render();toast('Plantilla guardada');
+  },
+  addlibex(b){
+    const ex=EXDB.find(x=>x.id===b.dataset.id);if(!ex)return;
+    if(state.draft.exercises.some(x=>x.id===ex.id)){toast('Ya está en esta sesión');return}
+    const ph=phaseOf(weekOf(state.draft.date));
+    const reps=ex.k==='b'?[6,10]:ex.k==='i'?[10,15]:[8,12];
+    const rest=ex.k==='b'?150:75;
+    const g=(ex.g&&ex.g.length)?ex.g[0]:'Core';
+    state.draft.exercises.push(mkExN({id:ex.id,name:ex.name,g:g,reps:reps,rest:rest,k:ex.k||'i'},3,ph.rir));
+    persist();render();toast('Añadido: '+ex.name);
+  }
 };
 document.addEventListener('click',e=>{
   const b=e.target.closest('[data-act]');if(!b)return;
@@ -819,16 +897,21 @@ const CHANGE={
   dayf(t){const d=ui.day||today();const v=num(t.value);state.days[d]=state.days[d]||{};if(v==null)delete state.days[d][t.dataset.k];else state.days[d][t.dataset.k]=v;persist();render()},
   dayb(t){const d=ui.day||today();state.days[d]=state.days[d]||{};state.days[d].creatine=t.checked;persist();render()},
   exsel(t){ui.ex=t.value;render()},
-  start(t){if(t.value){state.settings.startDate=t.value;persist();render()}}
+  start(t){if(t.value){state.settings.startDate=t.value;persist();render()}},
+  libq(t){ui.lib.q=t.value;render()},
+  libg(t){ui.lib.g=t.value;render()},
+  libeq(t){ui.lib.eq=t.value;render()}
 };
 document.addEventListener('change',e=>{const t=e.target,c=t.dataset&&t.dataset.c;if(c&&CHANGE[c])CHANGE[c](t)});
 
 document.addEventListener('keydown',e=>{
   const t=e.target;
   if((e.key==='Enter'||e.key===' ')&&t.matches&&t.matches('.mg,.mrow')){e.preventDefault();t.dispatchEvent(new MouseEvent('click',{bubbles:true}))}
+  if(e.key==='Enter'&&t.id==='libq'){e.preventDefault();t.dispatchEvent(new Event('change',{bubbles:true}))}
 });
 render();
 setSync('local');
+loadExDB();
 })();
 </script>
 </body>
