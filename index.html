@@ -3,12 +3,12 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Diario de entrenamiento</title>
+<title>Coach de entrenamiento</title>
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Entreno">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="theme-color" content="#4B6A25">
+<meta name="theme-color" content="#0d1210">
 <link rel="apple-touch-icon" href="icon.png">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -164,10 +164,30 @@ nav button.on svg{stroke:var(--ac)}
 #toast.on{opacity:1}
 @media (prefers-reduced-motion:reduce){#toast{transition:none}}
 </style>
+<style id="v21-refresh">
+:root{--bg:#0d1210;--sf:#171e1a;--ink:#f0f5ee;--mut:#9eaea4;--line:rgba(255,255,255,.09);--ac:#a6d34f;--acink:#0b110c;--st:#83bdf0;--warn:#efb25d;--ok:#77cf92;--bad:#ff8b80;color-scheme:dark}
+html{background:#0d1210}
+body{background:radial-gradient(circle at 12% -4%,rgba(166,211,79,.15),transparent 30%),radial-gradient(circle at 92% 4%,rgba(78,178,158,.10),transparent 26%),linear-gradient(180deg,#121814 0,#0d1210 46%,#0a0e0c 100%);min-height:100vh}
+.wrap{max-width:620px;padding:18px 16px 178px}.apphead{align-items:flex-start;margin-bottom:18px}.eyebrow{font-size:11px;letter-spacing:.16em;font-weight:700;color:#b7c5bc;margin-bottom:7px}.eyebrow:before{content:'';display:inline-block;width:20px;height:2px;margin-right:7px;vertical-align:middle;border-radius:2px;background:linear-gradient(90deg,var(--ac),#55bea7)}h1{font-size:40px;letter-spacing:-.01em}
+#sync{padding:8px 10px;border:1px solid rgba(255,255,255,.08);border-radius:999px;background:rgba(255,255,255,.05);box-shadow:0 8px 24px rgba(0,0,0,.18);white-space:nowrap}#sync:before{content:'';display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--ok);margin-right:6px;box-shadow:0 0 0 4px rgba(119,207,146,.12)}
+.card{border-radius:20px;border-color:rgba(255,255,255,.08);background:linear-gradient(180deg,rgba(25,33,29,.96),rgba(20,27,24,.96));box-shadow:0 14px 38px rgba(0,0,0,.23)}
+.hero,.hero-s{border:1px solid rgba(255,255,255,.08);border-radius:22px;padding:16px;background:linear-gradient(135deg,rgba(166,211,79,.17),rgba(131,189,240,.08));box-shadow:0 14px 36px rgba(0,0,0,.22);overflow:hidden;position:relative}.hero:after,.hero-s:after{content:'';position:absolute;width:130px;height:130px;right:-46px;top:-48px;border-radius:50%;background:radial-gradient(circle,rgba(255,255,255,.13),transparent 68%)}.hero .big{font-size:54px}.hero-s .big{font-size:46px}
+.btn{border-radius:14px;background:linear-gradient(180deg,var(--ac),#87b83a);border-color:rgba(166,211,79,.25);font-weight:700;box-shadow:0 9px 22px rgba(102,155,43,.17)}.btn.ghost{background:rgba(255,255,255,.045);border-color:rgba(255,255,255,.10);color:var(--ink);box-shadow:none}.btn.warn{background:rgba(255,139,128,.06);border-color:rgba(255,139,128,.25)}
+.seg{border-radius:14px;background:rgba(255,255,255,.035);border-color:rgba(255,255,255,.08)}.seg button{color:var(--mut);border-color:rgba(255,255,255,.07);font-weight:600}.seg button.on{background:rgba(166,211,79,.15);color:var(--ink)}.tag{border-radius:999px;background:rgba(166,211,79,.16);color:#dcf1b9;padding:2px 7px}
+.fld input,.f input,.f select,.note-in,.txt,.chk{background:rgba(255,255,255,.045);border-color:rgba(255,255,255,.10);border-radius:14px}.set{padding:7px;border-radius:16px;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.045)}.set.done{background:rgba(166,211,79,.07);border-color:rgba(166,211,79,.14)}.set.done .chk{background:linear-gradient(180deg,var(--ac),#87b83a);color:var(--acink)}
+.rirline,.tgt,.advice{border-radius:14px}.bar{border-radius:999px;background:rgba(255,255,255,.08)}.bar i{border-radius:999px;background:linear-gradient(90deg,var(--ac),#55bea7)}.kpi{padding:10px;border-radius:16px;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.05)}.chip{background:rgba(255,255,255,.04);border-color:rgba(255,255,255,.09)}
+.storage-kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px}.storage-kpis>div{padding:10px;border-radius:14px;background:rgba(255,255,255,.04);text-align:center}.storage-kpis b{display:block;font-family:var(--cond);font-size:30px;line-height:1}.storage-kpis span{font-size:12px;color:var(--mut)}.recovery{border-color:rgba(239,178,93,.25)}
+nav{left:10px;right:10px;bottom:10px;border-radius:22px;padding:4px;padding-bottom:calc(4px + env(safe-area-inset-bottom,0px));background:rgba(20,27,24,.92);backdrop-filter:blur(18px);border:1px solid rgba(255,255,255,.08);box-shadow:0 14px 38px rgba(0,0,0,.34)}nav button{border-radius:18px;min-height:58px}nav button.on{background:rgba(255,255,255,.05);color:var(--ink)}
+#timer{bottom:calc(88px + env(safe-area-inset-bottom,0px));border-radius:18px;background:#111714;border:1px solid rgba(255,255,255,.08);box-shadow:0 14px 38px rgba(0,0,0,.32)}#toast{background:#eff7ed;color:#0c110d;font-weight:600;border-radius:12px;box-shadow:0 12px 32px rgba(0,0,0,.3)}
+@media(max-width:390px){.wrap{padding-left:12px;padding-right:12px}h1{font-size:35px}.hero .big{font-size:48px}.apphead{gap:8px}#sync{font-size:10px;padding:7px 8px}}
+</style>
 </head>
 <body>
 <div class="wrap">
-  <div class="top"><h1 id="ttl">Sesión</h1><span id="sync">Cargando…</span></div>
+  <header class="top apphead">
+    <div><div class="eyebrow">COACH DIGITAL</div><h1 id="ttl">Sesión</h1></div>
+    <span id="sync">Cargando…</span>
+  </header>
   <main id="app"></main>
 </div>
 <div id="timer" hidden><span>Descanso</span><b id="tcount">0:00</b><button type="button" data-act="tadj" data-d="-15">−15 s</button><button type="button" data-act="tadj" data-d="15">+15 s</button><button type="button" data-act="tskip">Saltar</button></div>
@@ -262,7 +282,7 @@ const isoDow=s=>((new Date(utc(s)).getUTCDay()+6)%7)+1;
 
 /* ---------- estado y guardado ---------- */
 const LS_KEY='diario-entreno-v1';
-const APP_VERSION='2.0';
+const APP_VERSION='2.1';
 function defaultState(){
   return{v:2,updatedAt:0,
     settings:{startDate:today(),days:[1,2,4,5],t:{kcal:2350,prot:165,carb:265,fat:70,water:2.5,steps:9000,sleep:7.5}},
@@ -273,19 +293,52 @@ function defaultState(){
 }
 function migrate(s){
   const d=defaultState();
-  s=s||d;
-  s.settings=Object.assign({},d.settings,s.settings||{});
-  s.settings.t=Object.assign({},d.settings.t,(s.settings&&s.settings.t)||{});
-  s.sessions=s.sessions||[];s.templates=s.templates||[];s.body=s.body||[];s.days=s.days||{};
+  s=(s&&typeof s==='object'&&!Array.isArray(s))?s:d;
+  s.settings=Object.assign({},d.settings,(s.settings&&typeof s.settings==='object')?s.settings:{});
+  s.settings.t=Object.assign({},d.settings.t,(s.settings.t&&typeof s.settings.t==='object')?s.settings.t:{});
+  s.sessions=Array.isArray(s.sessions)?s.sessions:[];
+  s.templates=Array.isArray(s.templates)?s.templates:[];
+  s.body=Array.isArray(s.body)?s.body:[];
+  s.days=(s.days&&typeof s.days==='object'&&!Array.isArray(s.days))?s.days:{};
   if(s.draft===undefined)s.draft=null;
-  // Migración V1 -> V2: conserva todos los datos y añade campos nuevos.
-  s.sessions.forEach(sess=>{sess.exercises=(sess.exercises||[]).map(e=>{e.sets=(e.sets||[]).map(x=>Object.assign({rir:null,warmup:false,done:true},x));return e})});
-  if(s.draft){s.draft.readiness=Object.assign({energy:'',fatigue:'',soreness:'',stress:'',sleepq:''},s.draft.readiness||{});(s.draft.exercises||[]).forEach(e=>e.sets=(e.sets||[]).map(x=>Object.assign({rir:'',warmup:false,done:false},x)))}
+  s.sessions=s.sessions.filter(x=>x&&typeof x==='object').map(sess=>{
+    sess.exercises=Array.isArray(sess.exercises)?sess.exercises:[];
+    sess.exercises=sess.exercises.map(e=>{
+      e=e&&typeof e==='object'?e:{};
+      e.g=Array.isArray(e.g)?(e.g[0]||'Core'):(e.g||'Core');
+      e.sets=Array.isArray(e.sets)?e.sets.map(x=>Object.assign({rir:null,warmup:false,done:true},x||{})):[];
+      return e;
+    });
+    return sess;
+  });
+  if(s.draft&&typeof s.draft==='object'){
+    s.draft.readiness=Object.assign({energy:'',fatigue:'',soreness:'',stress:'',sleepq:''},s.draft.readiness||{});
+    s.draft.exercises=Array.isArray(s.draft.exercises)?s.draft.exercises:[];
+    s.draft.exercises.forEach(e=>{
+      e.g=Array.isArray(e.g)?(e.g[0]||'Core'):(e.g||'Core');
+      e.sets=Array.isArray(e.sets)?e.sets.map(x=>Object.assign({rir:'',warmup:false,done:!!(x&&x.done)},x||{})):[];
+    });
+  }else s.draft=null;
   s.v=2;
   return s;
 }
-function loadLocal(){try{const r=localStorage.getItem(LS_KEY);return r?JSON.parse(r):null}catch(e){return null}}
+function loadLocal(){
+  try{
+    const keys=[LS_KEY,'diario-entreno','coach-entreno-v1','entreno-state'];
+    for(const k of keys){
+      const raw=localStorage.getItem(k);
+      if(raw){try{return JSON.parse(raw)}catch(e){}}
+    }
+    return null;
+  }catch(e){return null}
+}
 let state=migrate(loadLocal());
+try{
+  if(!localStorage.getItem(LS_KEY) && (state.sessions.length||state.body.length||Object.keys(state.days).length||state.draft)){
+    localStorage.setItem(LS_KEY,JSON.stringify(state));
+  }
+}catch(e){}
+function storageStats(){return{sessions:state.sessions.length,body:state.body.length,days:Object.keys(state.days||{}).length,hasDraft:!!state.draft}};
 function setSync(k){
   const el=$('#sync');if(!el)return;
   el.textContent={ok:'Guardado en este teléfono',local:'Guardado en este teléfono'}[k]||'';
@@ -782,23 +835,33 @@ function vPlan(){
   h+='<div class="sec">Sesiones tipo</div>'+ORDER.map(k=>'<details class="hist" open><summary><b>'+esc(PLAN[k].name)+'</b>&nbsp;· '+esc(PLAN[k].focus)+'</summary><table><tbody>'
     +PLAN[k].ex.map(e=>'<tr><td>'+esc(e.name)+'</td><td class="num" style="text-align:right;white-space:nowrap">'+setsFor(e,w)+' × '+e.reps[0]+'-'+e.reps[1]+'</td></tr>').join('')+'</tbody></table></details>').join('');
   h+='<div class="sec">Reglas de progresión</div><ul class="sub" style="padding-left:18px;margin:0"><li>Cuando llegues al tope de repeticiones en todas las series con buena técnica, sube el peso (2,5-5 %).</li><li>Descansa 2-3 min en básicos y 60-90 s en aislamientos. Los brazos, en superserie para ahorrar tiempo.</li><li>Cada 6.ª semana es de descarga: menos series, mismos pesos.</li><li>Si un día no llegas a tiempo, quita un aislamiento antes que acortar los descansos de los básicos.</li></ul>';
-  h+='<div class="sec">Datos</div><div class="row">'
+  {const ss=storageStats();h+='<div class="sec">Datos</div><div class="card storage-card"><div class="row sp"><div><b>Datos de este dispositivo</b><div class="sub">Almacenamiento local · '+esc(LS_KEY)+'</div></div><span class="tag">V'+APP_VERSION+'</span></div><div class="storage-kpis"><div><b>'+ss.sessions+'</b><span>sesiones</span></div><div><b>'+ss.body+'</b><span>medidas</span></div><div><b>'+ss.days+'</b><span>días</span></div></div>'+(ss.hasDraft?'<div class="tip">Hay una sesión en curso guardada localmente.</div>':'')+'</div><div class="row">'
     +'<button type="button" class="btn ghost sm" data-act="exp" data-w="sess">Sesiones (CSV)</button>'
     +'<button type="button" class="btn ghost sm" data-act="exp" data-w="body">Medidas (CSV)</button>'
     +'<button type="button" class="btn ghost sm" data-act="exp" data-w="json">Copia completa</button><button type="button" class="btn ghost sm" data-act="imp">Restaurar copia</button><input id="import-json" type="file" accept="application/json,.json" hidden></div><p class="tip">La copia JSON contiene todos tus entrenamientos, medidas, nutrición, ajustes y plantillas. Guárdala periódicamente fuera del navegador.</p>'
-    +'<div style="margin-top:16px">'+armBtn('warn sm','reset','','Borrar todos los datos','¿Seguro? Toca otra vez para borrar')+'</div>';
+    +'<div style="margin-top:16px">'+armBtn('warn sm','reset','','Borrar todos los datos','¿Seguro? Toca otra vez para borrar')+'</div>';}
   return h;
 }
 
 const VIEWS={sesion:vSesion,cuerpo:vCuerpo,nutri:vNutri,progreso:vProgreso,plan:vPlan};
 const TITLES={sesion:'Sesión',cuerpo:'Cuerpo',nutri:'Nutrición',progreso:'Progreso',plan:'Plan'};
+function recoveryView(err){
+  const ss=storageStats();
+  return '<div class="card recovery"><span class="tag">Protección de datos</span><h2 style="margin:8px 0">Tus datos locales siguen intactos</h2><p class="sub">La interfaz encontró un registro antiguo que no pudo representar. No se ha borrado nada.</p><div class="storage-kpis"><div><b>'+ss.sessions+'</b><span>sesiones</span></div><div><b>'+ss.body+'</b><span>medidas</span></div><div><b>'+ss.days+'</b><span>días</span></div></div><div class="advice warn"><b>Detalle:</b> '+esc(err&&err.message?err.message:String(err))+'</div><div class="row" style="margin-top:12px"><button class="btn" data-act="exp" data-w="json">Guardar copia</button><button class="btn ghost" data-act="hardreload">Reintentar</button></div></div>';
+}
 function render(){
   const y=window.scrollY;
-  $('#ttl').textContent=TITLES[ui.tab];
-  $('#app').innerHTML=VIEWS[ui.tab]();
-  document.querySelectorAll('nav button').forEach(b=>{const on=b.dataset.t===ui.tab;b.classList.toggle('on',on);if(on)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current')});
-  window.scrollTo(0,y);
-  tick();
+  try{
+    $('#ttl').textContent=TITLES[ui.tab]||'Entreno';
+    $('#app').innerHTML=VIEWS[ui.tab]();
+    document.querySelectorAll('nav button').forEach(b=>{const on=b.dataset.t===ui.tab;b.classList.toggle('on',on);if(on)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current')});
+    window.scrollTo(0,y);
+    tick();
+  }catch(err){
+    console.error(err);
+    $('#ttl').textContent='Recuperación';
+    $('#app').innerHTML=recoveryView(err);
+  }
 }
 
 /* ---------- exportar ---------- */
@@ -891,6 +954,7 @@ const ACT={
     state.templates.push({id:uid(),name:n,exercises:exs});
     persist();render();toast('Plantilla guardada');
   },
+  hardreload(){window.location.reload()},
   addlibex(b){
     const ex=EXDB.find(x=>x.id===b.dataset.id);if(!ex)return;
     if(state.draft.exercises.some(x=>x.id===ex.id)){toast('Ya está en esta sesión');return}
