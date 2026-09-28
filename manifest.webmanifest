@@ -1,0 +1,14 @@
+{
+  "name": "Coach de entrenamiento",
+  "short_name": "Entreno",
+  "description": "Diario de entrenamiento, progresión, nutrición y medidas corporales.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#EDEFE9",
+  "theme_color": "#4B6A25",
+  "orientation": "portrait-primary",
+  "icons": [
+    {"src":"icon.png","sizes":"any","type":"image/png","purpose":"any"}
+  ]
+}
