@@ -181,6 +181,19 @@ nav{left:10px;right:10px;bottom:10px;border-radius:22px;padding:4px;padding-bott
 #timer{bottom:calc(88px + env(safe-area-inset-bottom,0px));border-radius:18px;background:#111714;border:1px solid rgba(255,255,255,.08);box-shadow:0 14px 38px rgba(0,0,0,.32);color:#f4f8f2}#tcount{color:#ffffff!important;opacity:1!important;text-shadow:0 1px 8px rgba(255,255,255,.18)}#timer>span{color:#d7e0da}#toast{background:#eff7ed;color:#0c110d;font-weight:600;border-radius:12px;box-shadow:0 12px 32px rgba(0,0,0,.3)}
 @media(max-width:390px){.wrap{padding-left:12px;padding-right:12px}h1{font-size:35px}.hero .big{font-size:48px}.apphead{gap:8px}#sync{font-size:10px;padding:7px 8px}}
 </style>
+<style id="nutrition-v22">
+.nutri-hero{padding:16px;border-radius:22px;background:linear-gradient(135deg,rgba(166,211,79,.16),rgba(85,190,167,.08));border:1px solid rgba(255,255,255,.08);box-shadow:0 14px 34px rgba(0,0,0,.18);margin:12px 0}
+.nutri-hero h2{font-size:34px}.nutri-hero .mission{font-size:16px;color:#dbe6de;margin-top:5px}
+.macro-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin:12px 0}.macro-box{padding:10px 7px;border-radius:15px;background:rgba(255,255,255,.04);text-align:center;border:1px solid rgba(255,255,255,.05)}.macro-box b{display:block;font:700 25px/1 var(--cond)}.macro-box span{font-size:11px;color:var(--mut)}
+.meal-card{margin:10px 0;padding:14px;border-radius:18px;background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.07)}.meal-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}.meal-num{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:9px;background:rgba(166,211,79,.14);color:#dff1bd;font:700 16px var(--cond)}.meal-card h3{font-size:22px}.meal-macros{display:flex;gap:7px;flex-wrap:wrap;margin-top:7px}.meal-macros span{font-size:12px;padding:3px 7px;border-radius:999px;background:rgba(255,255,255,.05);color:var(--mut)}
+.recipe-meta{display:flex;gap:8px;flex-wrap:wrap;margin:7px 0}.recipe-meta span{font-size:12px;color:var(--mut)}.ingredients{margin:8px 0 0;padding-left:18px;color:#cfd9d2;font-size:14px}.steps{padding-left:20px;color:#cfd9d2;font-size:14px}
+.nutri-score{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.nutri-score>div{padding:11px;border-radius:15px;background:rgba(255,255,255,.04);text-align:center}.nutri-score b{display:block;font:700 28px/1 var(--cond)}.nutri-score span{font-size:11px;color:var(--mut)}
+.food-swap{display:grid;grid-template-columns:1fr 1fr;gap:8px}.food-swap>div{padding:10px;border-radius:14px;background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.05)}.food-swap b{display:block;margin-bottom:3px}
+.week-day{padding:10px 0;border-bottom:1px solid rgba(255,255,255,.07)}.week-day:last-child{border-bottom:0}.week-day strong{font-family:var(--cond);font-size:20px}.week-meals{font-size:13px;color:var(--mut);margin-top:4px}
+.shop-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.shop-cat{padding:10px;border-radius:14px;background:rgba(255,255,255,.035)}.shop-cat b{display:block;margin-bottom:4px}.shop-cat ul{margin:0;padding-left:17px;color:var(--mut);font-size:13px}
+.guide-card{padding:14px;margin:10px 0;border-radius:18px;background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.06)}.guide-card h3{margin-bottom:5px}.plate{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:10px 0}.plate>div{padding:12px;border-radius:14px;text-align:center;background:rgba(255,255,255,.04)}.plate .veg{grid-row:span 2;background:rgba(85,190,167,.10)}.plate b{display:block}
+@media(max-width:390px){.macro-grid{grid-template-columns:repeat(2,1fr)}.shop-grid,.food-swap{grid-template-columns:1fr}.nutri-score{grid-template-columns:repeat(3,1fr)}}
+</style>
 </head>
 <body>
 <div class="wrap">
@@ -282,7 +295,7 @@ const isoDow=s=>((new Date(utc(s)).getUTCDay()+6)%7)+1;
 
 /* ---------- estado y guardado ---------- */
 const LS_KEY='diario-entreno-v1';
-const APP_VERSION='2.1';
+const APP_VERSION='2.2';
 function defaultState(){
   return{v:2,updatedAt:0,
     settings:{startDate:today(),days:[1,2,4,5],t:{kcal:2350,prot:165,carb:265,fat:70,water:2.5,steps:9000,sleep:7.5}},
@@ -296,6 +309,7 @@ function migrate(s){
   s=(s&&typeof s==='object'&&!Array.isArray(s))?s:d;
   s.settings=Object.assign({},d.settings,(s.settings&&typeof s.settings==='object')?s.settings:{});
   s.settings.t=Object.assign({},d.settings.t,(s.settings.t&&typeof s.settings.t==='object')?s.settings.t:{});
+  s.settings.nutri=Object.assign({meals:4,menuSeed:0},(s.settings.nutri&&typeof s.settings.nutri==='object')?s.settings.nutri:{});
   s.sessions=Array.isArray(s.sessions)?s.sessions:[];
   s.templates=Array.isArray(s.templates)?s.templates:[];
   s.body=Array.isArray(s.body)?s.body:[];
@@ -748,31 +762,142 @@ function vCuerpo(){
   return h;
 }
 
+/* ---------- sistema nutricional guiado ---------- */
+const RECIPES=[
+{id:'avena-yogur',slot:'breakfast',name:'Bol de yogur, avena y fruta',kcal:520,p:38,c:66,f:12,prep:5,tags:['rápida','sin cocinar'],ing:[['yogur griego/skyr',250,'g','Lácteos'],['avena',70,'g','Despensa'],['plátano',1,'ud','Fruta y verdura'],['frutos rojos',100,'g','Fruta y verdura'],['nueces',15,'g','Despensa']],steps:['Mezcla el yogur con la avena.','Añade la fruta y termina con las nueces.']},
+{id:'tostadas-huevo',slot:'breakfast',name:'Tostadas con huevo, pavo y fruta',kcal:540,p:37,c:57,f:18,prep:10,tags:['salado','fácil'],ing:[['pan integral',100,'g','Pan y cereales'],['huevos',2,'ud','Proteínas'],['pavo loncheado',80,'g','Proteínas'],['tomate',100,'g','Fruta y verdura'],['aceite de oliva',5,'g','Despensa'],['fruta',1,'ud','Fruta y verdura']],steps:['Tuesta el pan y añade tomate.','Cocina los huevos y acompaña con el pavo.','Toma la fruta de postre.']},
+{id:'porridge-proteico',slot:'breakfast',name:'Porridge de plátano y proteína',kcal:505,p:36,c:69,f:10,prep:8,tags:['dulce','pre-entreno'],ing:[['avena',75,'g','Despensa'],['leche',250,'ml','Lácteos'],['plátano',1,'ud','Fruta y verdura'],['proteína en polvo',25,'g','Despensa'],['canela',1,'g','Despensa']],steps:['Calienta la avena con la leche.','Retira del fuego y mezcla la proteína.','Añade el plátano y canela.']},
+{id:'tortilla-desayuno',slot:'breakfast',name:'Tortilla, pan y yogur',kcal:515,p:39,c:49,f:17,prep:10,tags:['salado','alto en proteína'],ing:[['huevos',2,'ud','Proteínas'],['claras de huevo',150,'g','Proteínas'],['pan integral',80,'g','Pan y cereales'],['yogur natural',125,'g','Lácteos'],['fruta',1,'ud','Fruta y verdura']],steps:['Prepara una tortilla con huevos y claras.','Acompaña con pan integral.','Completa con yogur y fruta.']},
+
+{id:'pollo-arroz',slot:'lunch',name:'Pollo con arroz y verduras',kcal:760,p:57,c:94,f:17,prep:25,tags:['meal prep','clásica'],ing:[['pechuga de pollo',180,'g','Proteínas'],['arroz',100,'g','Pan y cereales'],['verduras variadas',250,'g','Fruta y verdura'],['aceite de oliva',12,'g','Despensa'],['fruta',1,'ud','Fruta y verdura']],steps:['Cuece el arroz.','Saltea el pollo y las verduras con el aceite.','Sirve junto y añade fruta de postre.']},
+{id:'pasta-pavo',slot:'lunch',name:'Pasta con pavo y tomate',kcal:745,p:55,c:96,f:15,prep:20,tags:['fácil','meal prep'],ing:[['pasta',110,'g','Pan y cereales'],['carne picada de pavo',170,'g','Proteínas'],['tomate triturado',180,'g','Fruta y verdura'],['verduras variadas',150,'g','Fruta y verdura'],['aceite de oliva',10,'g','Despensa'],['parmesano',15,'g','Lácteos']],steps:['Cuece la pasta.','Cocina el pavo con verduras y tomate.','Mezcla y termina con parmesano.']},
+{id:'lentejas-arroz',slot:'lunch',name:'Lentejas con arroz y huevo',kcal:735,p:40,c:101,f:18,prep:20,tags:['legumbres','económica'],ing:[['lentejas cocidas',300,'g','Legumbres'],['arroz',65,'g','Pan y cereales'],['huevos',2,'ud','Proteínas'],['verduras para sofrito',200,'g','Fruta y verdura'],['aceite de oliva',10,'g','Despensa']],steps:['Haz un sofrito ligero.','Añade las lentejas y el arroz ya cocido.','Sirve con los huevos cocidos o a la plancha.']},
+{id:'garbanzos-atun',slot:'lunch',name:'Ensalada de garbanzos y atún',kcal:720,p:48,c:73,f:24,prep:10,tags:['sin cocinar','legumbres'],ing:[['garbanzos cocidos',260,'g','Legumbres'],['atún al natural',160,'g','Proteínas'],['tomate',150,'g','Fruta y verdura'],['pimiento',100,'g','Fruta y verdura'],['cebolla',50,'g','Fruta y verdura'],['aceite de oliva',15,'g','Despensa'],['pan integral',60,'g','Pan y cereales']],steps:['Escurre garbanzos y atún.','Mezcla con las verduras.','Aliña con aceite y acompaña con pan.']},
+
+{id:'yogur-fruta',slot:'snack',name:'Yogur alto en proteína, fruta y frutos secos',kcal:330,p:27,c:35,f:10,prep:3,tags:['rápida','sin cocinar'],ing:[['skyr/yogur alto en proteína',250,'g','Lácteos'],['fruta',1,'ud','Fruta y verdura'],['almendras',15,'g','Despensa'],['miel',10,'g','Despensa']],steps:['Pon todo en un bol y mezcla.']},
+{id:'bocadillo-pavo',slot:'snack',name:'Bocadillo de pavo y queso + fruta',kcal:390,p:31,c:52,f:8,prep:5,tags:['portable','pre-entreno'],ing:[['pan',100,'g','Pan y cereales'],['pavo loncheado',100,'g','Proteínas'],['queso ligero',30,'g','Lácteos'],['tomate',50,'g','Fruta y verdura'],['fruta',1,'ud','Fruta y verdura']],steps:['Monta el bocadillo con pavo, queso y tomate.','Toma la fruta aparte.']},
+{id:'batido-avena',slot:'snack',name:'Batido de leche, plátano y avena',kcal:370,p:28,c:57,f:7,prep:3,tags:['rápida','post-entreno'],ing:[['leche',300,'ml','Lácteos'],['plátano',1,'ud','Fruta y verdura'],['avena',35,'g','Despensa'],['proteína en polvo',20,'g','Despensa']],steps:['Tritura todos los ingredientes hasta que quede homogéneo.']},
+{id:'hummus-huevo',slot:'snack',name:'Tostadas de hummus y huevo',kcal:365,p:22,c:41,f:13,prep:8,tags:['salado','fácil'],ing:[['pan integral',80,'g','Pan y cereales'],['hummus',50,'g','Legumbres'],['huevos',2,'ud','Proteínas'],['tomate',100,'g','Fruta y verdura']],steps:['Tuesta el pan y añade hummus.','Cubre con huevo y tomate.']},
+
+{id:'salmon-patata',slot:'dinner',name:'Salmón con patata y verduras',kcal:640,p:45,c:58,f:24,prep:25,tags:['omega-3','horno'],ing:[['salmón',170,'g','Proteínas'],['patata',300,'g','Pan y cereales'],['verduras variadas',250,'g','Fruta y verdura'],['aceite de oliva',8,'g','Despensa']],steps:['Asa o cuece la patata.','Cocina el salmón a la plancha u horno.','Añade una buena ración de verduras.']},
+{id:'merluza-arroz',slot:'dinner',name:'Merluza con arroz y verduras',kcal:610,p:50,c:73,f:12,prep:20,tags:['ligera','alta en proteína'],ing:[['merluza',220,'g','Proteínas'],['arroz',75,'g','Pan y cereales'],['verduras variadas',250,'g','Fruta y verdura'],['aceite de oliva',10,'g','Despensa']],steps:['Cuece el arroz.','Cocina la merluza a la plancha.','Saltea o cuece las verduras y sirve junto.']},
+{id:'tortilla-patata-fit',slot:'dinner',name:'Tortilla de patata sencilla + ensalada',kcal:620,p:39,c:61,f:24,prep:25,tags:['casera','económica'],ing:[['patata',300,'g','Pan y cereales'],['huevos',3,'ud','Proteínas'],['claras de huevo',120,'g','Proteínas'],['cebolla',80,'g','Fruta y verdura'],['aceite de oliva',10,'g','Despensa'],['ensalada variada',200,'g','Fruta y verdura']],steps:['Cocina la patata y cebolla con poco aceite.','Añade huevos y claras y cuaja la tortilla.','Acompaña con ensalada.']},
+{id:'fajitas-pollo',slot:'dinner',name:'Fajitas de pollo y verduras',kcal:625,p:51,c:68,f:16,prep:20,tags:['rápida','sabrosa'],ing:[['pechuga de pollo',170,'g','Proteínas'],['tortillas de trigo',3,'ud','Pan y cereales'],['pimiento y cebolla',220,'g','Fruta y verdura'],['yogur natural',60,'g','Lácteos'],['aceite de oliva',8,'g','Despensa']],steps:['Saltea pollo, pimiento y cebolla.','Rellena las tortillas.','Usa yogur con especias como salsa.']}
+];
+function nutriCfg(){state.settings.nutri=Object.assign({meals:4,menuSeed:0},state.settings.nutri||{});return state.settings.nutri}
+function hashDate(s){return String(s).split('').reduce((a,c)=>((a*31+c.charCodeAt(0))>>>0),17)}
+function plannedTrainingDay(date){
+  if(state.sessions.some(s=>s.date===date))return true;
+  const weeks=Math.max(weekOf(date)+1,2),list=[].concat.apply([],schedule(weeks).map(w=>w.list));
+  return list.some(x=>x.date===date);
+}
+function slotPlan(n){
+  if(n===3)return[{slot:'breakfast',label:'Desayuno',share:.25},{slot:'lunch',label:'Comida',share:.40},{slot:'dinner',label:'Cena',share:.35}];
+  if(n===5)return[{slot:'breakfast',label:'Desayuno',share:.20},{slot:'snack',label:'Media mañana',share:.10},{slot:'lunch',label:'Comida',share:.35},{slot:'snack',label:'Merienda',share:.10},{slot:'dinner',label:'Cena',share:.25}];
+  return[{slot:'breakfast',label:'Desayuno',share:.24},{slot:'lunch',label:'Comida',share:.36},{slot:'snack',label:'Merienda',share:.15},{slot:'dinner',label:'Cena',share:.25}];
+}
+function recipePick(slot,date,ix){
+  const pool=RECIPES.filter(r=>r.slot===slot),seed=hashDate(date)+(nutriCfg().menuSeed||0)*19+ix*7;
+  return pool[seed%pool.length];
+}
+function mealScale(r,targetKcal){return Math.max(.72,Math.min(1.45,targetKcal/r.kcal))}
+function scaledMacro(r,k,scale){return Math.round(r[k]*scale)}
+function fmtQty(n,u,scale){
+  const v=n*scale;
+  if(u==='ud')return (v<1.25?1:Math.round(v))+' '+u;
+  if(u==='g'||u==='ml')return Math.round(v/5)*5+' '+u;
+  return fmt(v,1)+' '+u;
+}
+function dayMenu(date){
+  const T=state.settings.t,n=+nutriCfg().meals||4,slots=slotPlan(n),training=plannedTrainingDay(date);
+  return {date,training,meals:slots.map((s,i)=>{
+    const r=recipePick(s.slot,date,i),target=(T.kcal||2200)*s.share,scale=mealScale(r,target);
+    return {label:s.label,r,scale,kcal:scaledMacro(r,'kcal',scale),p:scaledMacro(r,'p',scale),c:scaledMacro(r,'c',scale),f:scaledMacro(r,'f',scale)};
+  })};
+}
+function menuTotals(m){return m.meals.reduce((a,x)=>({kcal:a.kcal+x.kcal,p:a.p+x.p,c:a.c+x.c,f:a.f+x.f}),{kcal:0,p:0,c:0,f:0})}
+function macroDeltaText(tot,T){
+  const tips=[];
+  if(tot.p<(T.prot||0)-12)tips.push('Para acercarte a proteína: añade 1 yogur alto en proteína, 2 huevos o 100-150 g extra de carne/pescado.');
+  if(tot.c<(T.carb||0)-25)tips.push('Si necesitas más hidratos: añade fruta, pan, arroz, pasta o patata.');
+  if(tot.f<(T.fat||0)-10)tips.push('Si faltan grasas: añade 10-15 g de aceite de oliva o un puñado pequeño de frutos secos.');
+  if(tot.kcal>(T.kcal||0)+180)tips.push('Si te pasas de calorías: reduce primero aceite, frutos secos o la ración de cereal, no la proteína.');
+  return tips;
+}
+function recipeCard(meal,full){
+  const r=meal.r,s=meal.scale||1;
+  let h='<div class="meal-card"><div class="meal-head"><div class="row" style="align-items:flex-start"><span class="meal-num">'+esc(meal.label?meal.label.charAt(0):'R')+'</span><div><h3>'+esc(r.name)+'</h3><div class="recipe-meta"><span>⏱ '+r.prep+' min</span><span>'+r.tags.map(esc).join(' · ')+'</span></div></div></div><b class="num">'+meal.kcal+' kcal</b></div>';
+  h+='<div class="meal-macros"><span>'+meal.p+' g proteína</span><span>'+meal.c+' g hidratos</span><span>'+meal.f+' g grasas</span></div>';
+  h+='<details'+(full?' open':'')+'><summary>Ingredientes y preparación</summary><ul class="ingredients">'+r.ing.map(x=>'<li><b>'+fmtQty(x[1],x[2],s)+'</b> '+esc(x[0])+'</li>').join('')+'</ul><ol class="steps">'+r.steps.map(x=>'<li>'+esc(x)+'</li>').join('')+'</ol></details></div>';
+  return h;
+}
+function shoppingList(start){
+  const agg={};
+  for(let i=0;i<7;i++){
+    const m=dayMenu(addDays(start,i));
+    m.meals.forEach(meal=>meal.r.ing.forEach(x=>{
+      const key=x[3]+'|'+x[0]+'|'+x[2],q=x[1]*meal.scale;
+      if(!agg[key])agg[key]={cat:x[3],item:x[0],u:x[2],q:0};agg[key].q+=q;
+    }));
+  }
+  const cats={};Object.values(agg).forEach(x=>{(cats[x.cat]||(cats[x.cat]=[])).push(x)});
+  return cats;
+}
+
 /* ---------- vistas: nutrición ---------- */
 function pct(v,t){return t>0?Math.min(100,Math.round((v||0)/t*100)):0}
 function progRow(label,v,t,unit,d){
   return '<div class="vrow"><span>'+label+'</span><b>'+fmt(v||0,d)+' / '+fmt(t,d)+' '+unit+'</b><div class="bar"><i style="width:'+pct(v,t)+'%"></i></div></div>';
 }
 function vNutri(){
-  const T=state.settings.t,d=ui.day||today(),D=state.days[d]||{};
+  const T=state.settings.t,d=ui.day||today(),D=state.days[d]||{},cfg=nutriCfg();
+  ui.nsec=ui.nsec||'hoy';
   const calc=Math.round(4*(T.prot||0)+4*(T.carb||0)+9*(T.fat||0));
   let h='<div class="row sp" style="margin-bottom:8px"><button type="button" class="btn ghost sm" data-act="dday" data-d="-1" aria-label="Día anterior">‹</button>'
     +'<div class="f" style="margin:0;flex:1"><input type="date" data-c="day" value="'+esc(d)+'" aria-label="Fecha"></div>'
     +'<button type="button" class="btn ghost sm" data-act="dday" data-d="1" aria-label="Día siguiente">›</button></div>';
-  h+='<div class="card">'+progRow('Calorías',D.kcal,T.kcal,'kcal',0)+progRow('Proteína',D.prot,T.prot,'g',0)+progRow('Hidratos',D.carb,T.carb,'g',0)+progRow('Grasas',D.fat,T.fat,'g',0)+progRow('Agua',D.water,T.water,'L',1)+progRow('Pasos',D.steps,T.steps,'',0)+progRow('Sueño',D.sleep,T.sleep,'h',1)
-    +'<div class="grid2" style="margin-top:6px">'
-    +[['kcal','Calorías'],['prot','Proteína (g)'],['carb','Hidratos (g)'],['fat','Grasas (g)'],['water','Agua (L)'],['steps','Pasos'],['sleep','Sueño (h)']]
-      .map(f=>'<div class="f"><label for="d-'+f[0]+'">'+f[1]+'</label><input id="d-'+f[0]+'" data-c="dayf" data-k="'+f[0]+'" inputmode="decimal" value="'+(D[f[0]]!=null?esc(String(D[f[0]]).replace('.',',')):'')+'"></div>').join('')
-    +'<div class="f"><label for="d-cre">Creatina (3-5 g)</label><input id="d-cre" type="checkbox" data-c="dayb" style="width:28px;min-height:28px;margin-top:8px" '+(D.creatine?'checked':'')+'></div></div></div>';
-  const days=[6,5,4,3,2,1,0].map(i=>addDays(today(),-i));
-  const okDays=days.filter(x=>{const y=state.days[x];return y&&y.prot>=0.9*T.prot}).length;
-  h+='<div class="sec">Últimos 7 días</div><table><thead><tr><th>Día</th><th>Prot.</th><th>Agua</th><th>Pasos</th><th>Sueño</th><th>Cr.</th></tr></thead><tbody>'
-    +days.map(x=>{const y=state.days[x]||{};return '<tr><td>'+esc(fmtDate(x,{month:undefined,day:undefined}))+'</td><td>'+fmt(y.prot,0)+'</td><td>'+fmt(y.water,1)+'</td><td>'+fmt(y.steps,0)+'</td><td>'+fmt(y.sleep,1)+'</td><td>'+(y.creatine?'✓':'')+'</td></tr>'}).join('')+'</tbody></table>'
-    +'<p class="tip">Proteína objetivo cumplida (≥ 90 %): '+okDays+' de 7 días.</p>';
-  h+='<details class="card"><summary>Objetivos diarios</summary><div class="grid2">'
-    +[['kcal','Calorías'],['prot','Proteína (g)'],['carb','Hidratos (g)'],['fat','Grasas (g)'],['water','Agua (L)'],['steps','Pasos'],['sleep','Sueño (h)']]
-      .map(f=>'<div class="f"><label for="t-'+f[0]+'">'+f[1]+'</label><input id="t-'+f[0]+'" data-f="tgt" data-k="'+f[0]+'" inputmode="decimal" value="'+esc(String(T[f[0]]).replace('.',','))+'"></div>').join('')
-    +'</div><p class="tip">Con esos macros: ~'+calc+' kcal (4·proteína + 4·hidratos + 9·grasas).</p></details>';
+  h+=seg('nsec',[['hoy','Hoy'],['semana','Menú 7 días'],['recetas','Recetas'],['guia','Guía']],ui.nsec);
+
+  if(ui.nsec==='hoy'){
+    const menu=dayMenu(d),tot=menuTotals(menu),tips=macroDeltaText(tot,T);
+    h+='<div class="nutri-hero"><div class="row sp"><div><div class="sub">'+(menu.training?'Día de entrenamiento':'Día sin entrenamiento')+'</div><h2>Tu plan de comida</h2></div><span class="tag">'+cfg.meals+' comidas</span></div><p class="mission">No necesitas calcular nada: usa este menú como guía y cambia alimentos por equivalentes cuando te venga mejor.</p>'
+      +'<div class="macro-grid"><div class="macro-box"><b>'+fmt(T.kcal,0)+'</b><span>kcal objetivo</span></div><div class="macro-box"><b>'+fmt(T.prot,0)+' g</b><span>proteína</span></div><div class="macro-box"><b>'+fmt(T.carb,0)+' g</b><span>hidratos</span></div><div class="macro-box"><b>'+fmt(T.fat,0)+' g</b><span>grasas</span></div></div></div>';
+    h+='<div class="row sp"><div class="sec" style="margin:18px 0 8px">Qué comer hoy</div><button class="btn ghost sm" data-act="menunew">Cambiar menú</button></div>';
+    h+=menu.meals.map((m,i)=>recipeCard(m,false)).join('');
+    h+='<div class="card"><div class="row sp"><b>Resultado aproximado del menú</b><span class="tag">orientativo</span></div><div class="nutri-score"><div><b>'+tot.kcal+'</b><span>kcal</span></div><div><b>'+tot.p+' g</b><span>proteína</span></div><div><b>'+tot.c+' g</b><span>hidratos</span></div></div>'
+      +(tips.length?'<div class="sec" style="font-size:18px;margin:12px 0 4px">Ajuste fácil</div><ul class="sub" style="padding-left:18px;margin:0">'+tips.map(x=>'<li>'+esc(x)+'</li>').join('')+'</ul>':'<div class="advice" style="margin-top:12px">El menú está razonablemente cerca de tus objetivos. No hace falta clavar cada gramo.</div>')+'</div>';
+    h+='<details class="card"><summary>Registrar lo que realmente he hecho hoy</summary>'+progRow('Calorías',D.kcal,T.kcal,'kcal',0)+progRow('Proteína',D.prot,T.prot,'g',0)+progRow('Hidratos',D.carb,T.carb,'g',0)+progRow('Grasas',D.fat,T.fat,'g',0)+progRow('Agua',D.water,T.water,'L',1)
+      +'<div class="grid2" style="margin-top:8px">'+[['kcal','Calorías'],['prot','Proteína (g)'],['carb','Hidratos (g)'],['fat','Grasas (g)'],['water','Agua (L)'],['steps','Pasos'],['sleep','Sueño (h)']].map(f=>'<div class="f"><label>'+f[1]+'</label><input data-c="dayf" data-k="'+f[0]+'" inputmode="decimal" value="'+(D[f[0]]!=null?esc(String(D[f[0]]).replace('.',',')):'')+'"></div>').join('')+'<div class="f"><label>Creatina (3-5 g)</label><input type="checkbox" data-c="dayb" style="width:28px;min-height:28px;margin-top:8px" '+(D.creatine?'checked':'')+'></div></div></details>';
+    const days=[6,5,4,3,2,1,0].map(i=>addDays(today(),-i)),okDays=days.filter(x=>{const y=state.days[x];return y&&y.prot>=0.9*T.prot}).length;
+    h+='<div class="sec">Constancia</div><div class="card"><b>Proteína objetivo ≥90 %: '+okDays+' de los últimos 7 días</b><p class="tip">Mira la semana, no un día aislado. La consistencia pesa mucho más que la perfección.</p></div>';
+  }
+
+  if(ui.nsec==='semana'){
+    const start=mondayOf(d),cats=shoppingList(start);
+    h+='<div class="nutri-hero"><div class="row sp"><div><div class="sub">Semana del '+esc(fmtDate(start,{weekday:undefined,year:'numeric'}))+'</div><h2>Menú semanal</h2></div><button class="btn ghost sm" data-act="menunew">Generar otro</button></div><p class="mission">Las cantidades se ajustan automáticamente a tus calorías objetivo. Puedes intercambiar comidas del mismo tipo entre días.</p></div>';
+    for(let i=0;i<7;i++){const md=addDays(start,i),m=dayMenu(md),tot=menuTotals(m);h+='<div class="week-day"><div class="row sp"><strong>'+esc(fmtDate(md,{year:undefined}))+'</strong><span class="sub">'+tot.kcal+' kcal · '+tot.p+' g prot.</span></div><div class="week-meals">'+m.meals.map(x=>'<b>'+esc(x.label)+':</b> '+esc(x.r.name)).join(' · ')+'</div></div>'}
+    h+='<div class="sec">Lista de compra orientativa</div><p class="tip">Agrupa los alimentos de los siete días. Las cantidades son aproximadas porque frutas, huevos y tortillas se redondean a unidades enteras.</p><div class="shop-grid">'+Object.keys(cats).sort().map(cat=>'<div class="shop-cat"><b>'+esc(cat)+'</b><ul>'+cats[cat].sort((a,b)=>a.item.localeCompare(b.item,'es')).map(x=>'<li>'+esc(x.item)+' · '+fmtQty(x.q,x.u,1)+'</li>').join('')+'</ul></div>').join('')+'</div>';
+  }
+
+  if(ui.nsec==='recetas'){
+    h+='<div class="nutri-hero"><h2>Recetas para no improvisar</h2><p class="mission">Todas están pensadas para ser fáciles, con alimentos corrientes y suficiente proteína. Las cantidades que ves aquí son una ración base; el menú diario las adapta a tus objetivos.</p></div>';
+    [['breakfast','Desayunos'],['lunch','Comidas'],['snack','Meriendas'],['dinner','Cenas']].forEach(gr=>{
+      h+='<div class="sec">'+gr[1]+'</div>';
+      RECIPES.filter(r=>r.slot===gr[0]).forEach(r=>{h+=recipeCard({r,scale:1,kcal:r.kcal,p:r.p,c:r.c,f:r.f,label:gr[1].slice(0,1)},false)});
+    });
+  }
+
+  if(ui.nsec==='guia'){
+    h+='<div class="nutri-hero"><h2>Nutrición sin estudiar nutrición</h2><p class="mission">Tu prioridad no es memorizar macros. Es repetir una estructura sencilla que puedas mantener.</p></div>';
+    h+='<div class="guide-card"><h3>1. En cada comida, empieza por la proteína</h3><p class="sub">Pollo, pavo, huevos, pescado, yogur/skyr, legumbres o tofu. La proteína ayuda a mantener y construir masa muscular cuando entrenas fuerza.</p></div>';
+    h+='<div class="guide-card"><h3>2. Usa los hidratos como combustible</h3><p class="sub">Arroz, pasta, pan, avena, patata, fruta y legumbres. No son “malos”: son especialmente útiles alrededor del entrenamiento y para rendir.</p></div>';
+    h+='<div class="guide-card"><h3>3. Las grasas son necesarias, pero muy densas en calorías</h3><p class="sub">Aceite de oliva, frutos secos, aguacate, pescado azul. Úsalas, pero mídeles la mano si quieres controlar calorías.</p></div>';
+    h+='<div class="guide-card"><h3>4. El plato fácil</h3><div class="plate"><div class="veg"><b>½ plato</b>verduras/hortalizas</div><div><b>¼ plato</b>proteína</div><div><b>¼ plato</b>arroz, pasta, patata, pan o legumbre</div></div><p class="sub">Añade fruta y agua. En días de entrenamiento puedes aumentar la parte de hidratos si lo necesitas.</p></div>';
+    h+='<div class="guide-card"><h3>5. No tienes que comer “perfecto”</h3><p class="sub">Piensa en semanas. Una comida social no arruina nada y una ensalada aislada tampoco arregla una mala semana. Busca que la mayoría de tus comidas se parezcan a esta estructura.</p></div>';
+    h+='<div class="sec">Intercambios rápidos</div><div class="food-swap"><div><b>Proteína</b><span class="sub">pollo ↔ pavo ↔ pescado ↔ huevos ↔ yogur alto en proteína ↔ legumbres</span></div><div><b>Hidratos</b><span class="sub">arroz ↔ pasta ↔ patata ↔ pan ↔ avena ↔ fruta</span></div><div><b>Grasas</b><span class="sub">aceite de oliva ↔ frutos secos ↔ aguacate ↔ pescado azul</span></div><div><b>Verduras</b><span class="sub">elige las que más te gusten; congeladas también sirven</span></div></div>';
+    h+='<div class="sec">Cómo quieres repartir el día</div><p class="tip">No hay un número mágico de comidas. Elige el que te resulte más fácil de mantener.</p>'+seg('nutrimeals',[['3','3 comidas'],['4','4 comidas'],['5','5 comidas']],String(cfg.meals));
+    h+='<details class="card"><summary>Ajustar mis objetivos</summary><div class="grid2">'+[['kcal','Calorías'],['prot','Proteína (g)'],['carb','Hidratos (g)'],['fat','Grasas (g)'],['water','Agua (L)']].map(f=>'<div class="f"><label>'+f[1]+'</label><input data-f="tgt" data-k="'+f[0]+'" inputmode="decimal" value="'+esc(String(T[f[0]]).replace('.',','))+'"></div>').join('')+'</div><p class="tip">Tus macros equivalen aproximadamente a '+calc+' kcal. Si cambias estos objetivos, el menú se redimensiona automáticamente.</p></details>';
+  }
   return h;
 }
 
@@ -955,6 +1080,8 @@ const ACT={
     persist();render();toast('Plantilla guardada');
   },
   hardreload(){window.location.reload()},
+  menunew(){const n=nutriCfg();n.menuSeed=(n.menuSeed||0)+1;persist();render();toast('Menú renovado')},
+  nutrimeals(b){const n=nutriCfg();n.meals=Math.max(3,Math.min(5,+b.dataset.v||4));persist();render()},
   addlibex(b){
     const ex=EXDB.find(x=>x.id===b.dataset.id);if(!ex)return;
     if(state.draft.exercises.some(x=>x.id===ex.id)){toast('Ya está en esta sesión');return}
