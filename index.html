@@ -194,6 +194,12 @@ nav{left:10px;right:10px;bottom:10px;border-radius:22px;padding:4px;padding-bott
 .guide-card{padding:14px;margin:10px 0;border-radius:18px;background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.06)}.guide-card h3{margin-bottom:5px}.plate{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:10px 0}.plate>div{padding:12px;border-radius:14px;text-align:center;background:rgba(255,255,255,.04)}.plate .veg{grid-row:span 2;background:rgba(85,190,167,.10)}.plate b{display:block}
 @media(max-width:390px){.macro-grid{grid-template-columns:repeat(2,1fr)}.shop-grid,.food-swap{grid-template-columns:1fr}.nutri-score{grid-template-columns:repeat(3,1fr)}}
 </style>
+<style id="swap-v23">
+.swap-btn{white-space:nowrap}.swap-panel{margin:10px 0 12px;padding:12px;border-radius:16px;background:rgba(131,189,240,.07);border:1px solid rgba(131,189,240,.16)}
+.swap-option{width:100%;display:flex;align-items:center;justify-content:space-between;gap:10px;text-align:left;margin-top:7px;padding:11px 12px;border-radius:14px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.04);color:var(--ink)}
+.swap-option:active{background:rgba(166,211,79,.10)}.swap-option span{min-width:0;display:block}.swap-option b{display:block;font-size:15px;line-height:1.2}.swap-option small{display:block;color:var(--mut);font-size:12px;margin-top:3px;white-space:normal}.swap-option em{font-style:normal;font-size:11px;white-space:nowrap;color:#dff1bd;background:rgba(166,211,79,.12);padding:4px 7px;border-radius:999px}
+@media(max-width:430px){.ex>.row.sp{align-items:flex-start}.ex>.row.sp>.row{width:100%;margin-top:7px}.swap-btn{flex:1}}
+</style>
 </head>
 <body>
 <div class="wrap">
@@ -295,7 +301,7 @@ const isoDow=s=>((new Date(utc(s)).getUTCDay()+6)%7)+1;
 
 /* ---------- estado y guardado ---------- */
 const LS_KEY='diario-entreno-v1';
-const APP_VERSION='2.2';
+const APP_VERSION='2.3';
 function defaultState(){
   return{v:2,updatedAt:0,
     settings:{startDate:today(),days:[1,2,4,5],t:{kcal:2350,prot:165,carb:265,fat:70,water:2.5,steps:9000,sleep:7.5}},
@@ -363,7 +369,7 @@ function persist(){
 }
 
 /* ---------- UI state ---------- */
-const ui={tab:'sesion',type:null,time:null,ex:null,day:null,arm:null,bdate:null,lib:{q:'',g:'',eq:''}};
+const ui={tab:'sesion',type:null,time:null,ex:null,day:null,arm:null,bdate:null,swap:null,lib:{q:'',g:'',eq:''}};
 let tt;
 function toast(m){const el=$('#toast');el.textContent=m;el.classList.add('on');clearTimeout(tt);tt=setTimeout(()=>el.classList.remove('on'),2400)}
 
@@ -391,6 +397,75 @@ function loadExDB(){
     }).catch(()=>{});
   }catch(e){}
 }
+
+/* ---------- sustitución inteligente de ejercicios ---------- */
+function exText(e){return norm((e&&e.name||'')+' '+(e&&e.en||''))}
+function movementTags(e){
+  const t=exText(e),a=[];
+  const add=(k,re)=>{if(re.test(t))a.push(k)};
+  add('press-pecho',/(press|bench press|floor press|fondos|dips)/);
+  add('apertura',/(apertura|fly|flye|pec deck)/);
+  add('remo',/(remo|\brow\b|rowing)/);
+  add('jalon',/(jalon|pulldown|pull-down|dominada|pull up|pull-up|chin up|chin-up)/);
+  add('press-hombro',/(militar|shoulder press|overhead press|arnold press)/);
+  add('lateral',/(lateral|side raise|deltoid raise)/);
+  add('curl-biceps',/(curl|curls)/);
+  add('triceps',/(triceps|tríceps|pushdown|pressdown|extension|extensión).*?(triceps|tríceps)?/);
+  add('sentadilla',/(sentadilla|squat|leg press|prensa|hack squat)/);
+  add('zancada',/(zancada|lunge|split squat|step up|step-up)/);
+  add('bisagra',/(rumano|romanian|deadlift|peso muerto|good morning|hip hinge)/);
+  add('curl-femoral',/(leg curl|curl femoral|hamstring curl)/);
+  add('extension-cuad',/(leg extension|extension de pierna|extensión de pierna)/);
+  add('gluteo',/(hip thrust|glute bridge|puente de gluteo|puente de glúteo)/);
+  add('gemelo',/(calf|gemelo|pantorrilla)/);
+  add('core',/(crunch|sit-up|sit up|abdominal|plank|plancha|ab roller)/);
+  return [...new Set(a)];
+}
+function inferredEquipment(e){
+  const hit=EXDB.find(x=>x.id===e.id);if(hit&&hit.eq)return hit.eq;
+  const t=exText(e);
+  if(/mancuerna|dumbbell/.test(t))return'Mancuernas';
+  if(/barra z|ez bar/.test(t))return'Barra Z';
+  if(/polea|cable|pulldown|pushdown/.test(t))return'Polea';
+  if(/maquina|máquina|machine|prensa|leg press/.test(t))return'Máquina';
+  if(/kettlebell|pesa rusa/.test(t))return'Kettlebell';
+  if(/barra|barbell/.test(t))return'Barra';
+  if(/banda|band/.test(t))return'Bandas';
+  return null;
+}
+function similarExercises(e){
+  if(!exdbReady||!EXDB.length)return[];
+  const src=EXDB.find(x=>x.id===e.id),group=e.g,kind=e.k||(src&&src.k),frc=src&&src.frc,eq=inferredEquipment(e),tags=movementTags(src||e);
+  const used=new Set((state.draft&&state.draft.exercises||[]).map(x=>x.id));
+  return EXDB.filter(x=>x.id!==e.id&&!used.has(x.id)&&Array.isArray(x.g)&&x.g.indexOf(group)>=0&&x.cat==='Fuerza').map(x=>{
+    let score=55;
+    if(x.g[0]===group)score+=18;
+    if(kind&&x.k===kind)score+=12;
+    if(frc&&x.frc===frc)score+=7;
+    if(eq&&x.eq===eq)score+=9;
+    const xt=movementTags(x),same=tags.filter(t=>xt.indexOf(t)>=0).length;
+    score+=same*26;
+    if(tags.length&&same===0)score-=16;
+    if(src&&Array.isArray(src.g)){const overlap=x.g.filter(g=>src.g.indexOf(g)>=0).length;score+=Math.min(12,overlap*4)}
+    if(x.lvl==='Intermedio')score+=2;
+    return{x,score,same};
+  }).filter(o=>o.score>=58).sort((a,b)=>b.score-a.score||a.x.name.localeCompare(b.x.name,'es')).slice(0,7);
+}
+function similarityLabel(n){
+  if(n>=105)return'Muy similar';
+  if(n>=82)return'Similar';
+  return'Alternativa';
+}
+function swapPanel(e,i){
+  if(ui.swap!==i)return'';
+  if(!exdbReady)return'<div class="swap-panel"><p class="empty">Cargando alternativas…</p></div>';
+  const list=similarExercises(e);
+  if(!list.length)return'<div class="swap-panel"><div class="row sp"><b>Alternativas</b><button class="btn ghost sm" data-act="swapclose">Cerrar</button></div><p class="empty">No encuentro una alternativa suficientemente parecida en la biblioteca.</p></div>';
+  return'<div class="swap-panel"><div class="row sp"><div><b>Alternativas a '+esc(e.name)+'</b><div class="sub">Mismo grupo muscular y patrón lo más parecido posible.</div></div><button class="btn ghost sm" data-act="swapclose">Cerrar</button></div>'
+    +list.map(o=>'<button type="button" class="swap-option" data-act="swapex" data-e="'+i+'" data-id="'+esc(o.x.id)+'"><span><b>'+esc(o.x.name)+'</b><small>'+esc(o.x.eq)+' · '+esc(o.x.g.join(', '))+'</small></span><em>'+similarityLabel(o.score)+'</em></button>').join('')
+    +'<p class="tip">El cambio afecta solo a esta sesión. Mantengo las series, repeticiones y descansos previstos para no alterar el objetivo del día.</p></div>';
+}
+
 function lastFor(id){
   for(let i=state.sessions.length-1;i>=0;i--){
     const sess=state.sessions[i],e=(sess.exercises||[]).find(x=>x.id===id);
@@ -686,7 +761,8 @@ function vDraft(){
   h+='<details class="card"><summary>Calentamiento (10 min)</summary><p class="sub">5 min de cardio suave y movilidad de hombro y cadera. Antes del primer básico haz 2-3 series de aproximación: ~50 %, 70 % y 85 % del peso de trabajo, con 5, 3 y 1 repeticiones.</p></details>';
   d.exercises.forEach((e,i)=>{
     const sg=suggest(e.id,e.reps,ph.rir);
-    h+='<section class="ex" data-e="'+i+'"><h3>'+esc(e.name)+'</h3><div class="meta">'+e.sets.length+' × '+e.reps[0]+'-'+e.reps[1]+' · descanso '+(e.rest>=120?'2-3 min':e.rest>=75?'60-90 s':'~60 s')+' · '+esc(e.g)+'</div>'
+    h+='<section class="ex" data-e="'+i+'"><div class="row sp" style="align-items:flex-start"><div><h3>'+esc(e.name)+'</h3><div class="meta">'+e.sets.length+' × '+e.reps[0]+'-'+e.reps[1]+' · descanso '+(e.rest>=120?'2-3 min':e.rest>=75?'60-90 s':'~60 s')+' · '+esc(e.g)+'</div></div><div class="row" style="gap:6px"><button type="button" class="btn ghost sm swap-btn" data-act="swapopen" data-e="'+i+'">⇄ Cambiar</button>'+(e._swapOriginal?'<button type="button" class="btn ghost sm" data-act="swaprestore" data-e="'+i+'">↶ Original</button>':'')+'</div></div>'
+      +swapPanel(e,i)
       +'<div class="tgt">'+esc(sg.text)+'</div>'
       +(sg.last?'<div class="last">Última vez ('+esc(fmtDate(sg.last.date,{weekday:undefined}))+'): '+sg.last.sets.map(x=>fmt(x.kg,2)+'×'+fmt(x.reps,0)+(x.rir!=null?' @'+fmt(x.rir,0):'')).join(' · ')+'</div>':'');
     e.sets.forEach((s,j)=>{
@@ -1078,6 +1154,30 @@ const ACT={
     const exs=state.draft.exercises.map(e=>({id:e.id,name:e.name,g:e.g,reps:e.reps,rest:e.rest,k:e.k,sets:e.sets.length}));
     state.templates.push({id:uid(),name:n,exercises:exs});
     persist();render();toast('Plantilla guardada');
+  },
+  swapopen(b){
+    const i=+b.dataset.e,e=state.draft&&state.draft.exercises[i];if(!e)return;
+    if((e.sets||[]).some(s=>s.done)){toast('Cambia el ejercicio antes de completar series');return}
+    ui.swap=ui.swap===i?null:i;render();
+  },
+  swapclose(){ui.swap=null;render()},
+  swapex(b){
+    const i=+b.dataset.e,d=state.draft,old=d&&d.exercises[i],cand=EXDB.find(x=>x.id===b.dataset.id);
+    if(!old||!cand)return;
+    if((old.sets||[]).some(s=>s.done)){toast('No puedo cambiarlo con series ya completadas');return}
+    const ph=phaseOf(weekOf(d.date)),work=(old.sets||[]).filter(s=>!s.warmup).length||3,warm=(old.sets||[]).filter(s=>s.warmup).length;
+    const original=old._swapOriginal||JSON.parse(JSON.stringify({id:old.id,name:old.name,g:old.g,reps:old.reps,rest:old.rest,k:old.k,note:old.note||''}));
+    const repl=mkExN({id:cand.id,name:cand.name,g:old.g,reps:old.reps,rest:old.rest,k:cand.k||old.k},work,ph.rir);
+    for(let n=0;n<warm;n++)repl.sets.unshift({kg:'',reps:'',rir:'',warmup:true,done:false});
+    repl.note=old.note||'';repl._swapOriginal=original;repl._swapFrom=old.name;
+    d.exercises[i]=repl;ui.swap=null;persist();render();toast('Cambiado por '+cand.name);
+  },
+  swaprestore(b){
+    const i=+b.dataset.e,d=state.draft,old=d&&d.exercises[i];if(!old||!old._swapOriginal)return;
+    if((old.sets||[]).some(s=>s.done)){toast('No puedo restaurarlo con series ya completadas');return}
+    const src=old._swapOriginal,ph=phaseOf(weekOf(d.date)),work=(old.sets||[]).filter(s=>!s.warmup).length||3,warm=(old.sets||[]).filter(s=>s.warmup).length;
+    const repl=mkExN(src,work,ph.rir);for(let n=0;n<warm;n++)repl.sets.unshift({kg:'',reps:'',rir:'',warmup:true,done:false});
+    repl.note=old.note||src.note||'';d.exercises[i]=repl;ui.swap=null;persist();render();toast('Ejercicio original restaurado');
   },
   hardreload(){window.location.reload()},
   menunew(){const n=nutriCfg();n.menuSeed=(n.menuSeed||0)+1;persist();render();toast('Menú renovado')},
