@@ -200,6 +200,17 @@ nav{left:10px;right:10px;bottom:10px;border-radius:22px;padding:4px;padding-bott
 .swap-option:active{background:rgba(166,211,79,.10)}.swap-option span{min-width:0;display:block}.swap-option b{display:block;font-size:15px;line-height:1.2}.swap-option small{display:block;color:var(--mut);font-size:12px;margin-top:3px;white-space:normal}.swap-option em{font-style:normal;font-size:11px;white-space:nowrap;color:#dff1bd;background:rgba(166,211,79,.12);padding:4px 7px;border-radius:999px}
 @media(max-width:430px){.ex>.row.sp{align-items:flex-start}.ex>.row.sp>.row{width:100%;margin-top:7px}.swap-btn{flex:1}}
 </style>
+<style id="library-v24">
+.library-head{padding:12px 14px;margin:8px 0 12px;border-radius:16px;background:linear-gradient(135deg,rgba(131,189,240,.09),rgba(166,211,79,.06));border:1px solid rgba(255,255,255,.06)}
+.lib-card{padding:12px 13px;margin:8px 0;border-radius:17px;background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.07)}
+.lib-card.primary-hit{border-color:rgba(166,211,79,.24);background:rgba(166,211,79,.055)}.lib-card.secondary-hit{border-color:rgba(131,189,240,.15)}
+.lib-name{font-size:16px;font-weight:700;line-height:1.2}.lib-es{font-size:12px;color:var(--mut);margin-top:3px}.lib-es span{opacity:.72}
+.lib-tags{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px}.lib-tags span{font-size:11px;color:var(--mut);padding:3px 7px;border-radius:999px;background:rgba(255,255,255,.045)}
+.lib-tags .muscle-main{color:#dff1bd;background:rgba(166,211,79,.11)}
+.lib-summary{margin:10px 0;padding:9px 11px;border-radius:13px;background:rgba(255,255,255,.035);font-size:13px;color:var(--mut)}.lib-summary b{color:var(--ink)}
+.ex .btn.warn{white-space:nowrap}
+@media(max-width:430px){.ex>.row.sp>.row{gap:5px!important}.ex>.row.sp>.row .btn{flex:1;padding-left:8px;padding-right:8px}}
+</style>
 </head>
 <body>
 <div class="wrap">
@@ -301,7 +312,7 @@ const isoDow=s=>((new Date(utc(s)).getUTCDay()+6)%7)+1;
 
 /* ---------- estado y guardado ---------- */
 const LS_KEY='diario-entreno-v1';
-const APP_VERSION='2.3';
+const APP_VERSION='2.4';
 function defaultState(){
   return{v:2,updatedAt:0,
     settings:{startDate:today(),days:[1,2,4,5],t:{kcal:2350,prot:165,carb:265,fat:70,water:2.5,steps:9000,sleep:7.5}},
@@ -369,7 +380,7 @@ function persist(){
 }
 
 /* ---------- UI state ---------- */
-const ui={tab:'sesion',type:null,time:null,ex:null,day:null,arm:null,bdate:null,swap:null,lib:{q:'',g:'',eq:''}};
+const ui={tab:'sesion',type:null,time:null,ex:null,day:null,arm:null,bdate:null,swap:null,lib:{q:'',g:'',eq:'',kind:'',role:'rank'}};
 let tt;
 function toast(m){const el=$('#toast');el.textContent=m;el.classList.add('on');clearTimeout(tt);tt=setTimeout(()=>el.classList.remove('on'),2400)}
 
@@ -462,7 +473,7 @@ function swapPanel(e,i){
   const list=similarExercises(e);
   if(!list.length)return'<div class="swap-panel"><div class="row sp"><b>Alternativas</b><button class="btn ghost sm" data-act="swapclose">Cerrar</button></div><p class="empty">No encuentro una alternativa suficientemente parecida en la biblioteca.</p></div>';
   return'<div class="swap-panel"><div class="row sp"><div><b>Alternativas a '+esc(e.name)+'</b><div class="sub">Mismo grupo muscular y patrón lo más parecido posible.</div></div><button class="btn ghost sm" data-act="swapclose">Cerrar</button></div>'
-    +list.map(o=>'<button type="button" class="swap-option" data-act="swapex" data-e="'+i+'" data-id="'+esc(o.x.id)+'"><span><b>'+esc(o.x.name)+'</b><small>'+esc(o.x.eq)+' · '+esc(o.x.g.join(', '))+'</small></span><em>'+similarityLabel(o.score)+'</em></button>').join('')
+    +list.map(o=>'<button type="button" class="swap-option" data-act="swapex" data-e="'+i+'" data-id="'+esc(o.x.id)+'"><span><b>'+esc(canonicalExName(o.x))+'</b><small>'+esc(o.x.eq)+' · '+esc(o.x.g.join(', '))+'</small></span><em>'+similarityLabel(o.score)+'</em></button>').join('')
     +'<p class="tip">El cambio afecta solo a esta sesión. Mantengo las series, repeticiones y descansos previstos para no alterar el objetivo del día.</p></div>';
 }
 
@@ -670,33 +681,78 @@ function liveInner(){
 function updateLive(){const el=$('#live');if(el&&state.draft)el.innerHTML=liveInner()}
 
 /* ---------- biblioteca de ejercicios ---------- */
-function libRow(ex){
-  const tag=ex.k==='b'?'Básico':ex.k==='i'?'Aislamiento':'';
-  return '<div class="card" style="padding:10px;margin:8px 0"><div class="row sp" style="align-items:flex-start"><b style="font-family:inherit;font-weight:600">'+esc(ex.name)+'</b>'
-    +'<button type="button" class="btn ghost sm" data-act="addlibex" data-id="'+esc(ex.id)+'">+ Añadir</button></div>'
-    +'<div class="sub">'+esc(ex.g.join(', '))+' · '+esc(ex.eq)+(tag?' · '+tag:'')+(ex.lvl?' · '+esc(ex.lvl):'')+'</div>'
-    +(ex.ins&&ex.ins.length?'<details><summary>Ejecución (en inglés)</summary><p class="sub">'+esc(ex.ins.join(' '))+'</p></details>':'')+'</div>';
+function canonicalExName(ex){
+  const n=String((ex&&ex.en)||'').trim(),es=String((ex&&ex.name)||'').trim();
+  return n||es||'Ejercicio';
+}
+function translatedExName(ex){
+  const en=canonicalExName(ex),es=String((ex&&ex.name)||'').trim();
+  return es&&norm(es)!==norm(en)?es:'';
+}
+function primaryMuscle(ex){return ex&&Array.isArray(ex.g)&&ex.g.length?ex.g[0]:'Sin clasificar'}
+function secondaryMuscles(ex){return ex&&Array.isArray(ex.g)?ex.g.slice(1):[]}
+function exKindLabel(ex){return ex&&ex.k==='i'?'Aislamiento':ex&&ex.k==='b'?'Básico / compuesto':'Otro'}
+function libraryScore(ex,L){
+  let s=0;
+  if(L.g){
+    if(primaryMuscle(ex)===L.g)s+=100;
+    else if(secondaryMuscles(ex).indexOf(L.g)>=0)s+=35;
+  }
+  if(L.kind&&ex.k===L.kind)s+=18;
+  if(L.eq&&ex.eq===L.eq)s+=8;
+  return s;
+}
+function libRow(ex,L){
+  const main=primaryMuscle(ex),sec=secondaryMuscles(ex),es=translatedExName(ex);
+  const primaryHit=L.g&&main===L.g,secondaryHit=L.g&&!primaryHit&&sec.indexOf(L.g)>=0;
+  return '<div class="lib-card '+(primaryHit?'primary-hit':secondaryHit?'secondary-hit':'')+'"><div class="row sp" style="align-items:flex-start;gap:12px"><div style="min-width:0"><div class="lib-name">'+esc(canonicalExName(ex))+'</div>'
+    +(es?'<div class="lib-es">'+esc(es)+' <span>· traducción automática</span></div>':'')
+    +'</div><button type="button" class="btn ghost sm" data-act="addlibex" data-id="'+esc(ex.id)+'">+ Añadir</button></div>'
+    +'<div class="lib-tags"><span class="muscle-main">Principal: '+esc(main)+'</span>'+(sec.length?'<span>Secundarios: '+esc(sec.join(', '))+'</span>':'')+'<span>'+esc(exKindLabel(ex))+'</span><span>'+esc(ex.eq||'Material no indicado')+'</span>'+(ex.lvl?'<span>'+esc(ex.lvl)+'</span>':'')+'</div>'
+    +(ex.ins&&ex.ins.length?'<details><summary>Cómo se ejecuta</summary><p class="sub">'+esc(ex.ins.join(' '))+'</p></details>':'')+'</div>';
 }
 function vLib(){
   const L=ui.lib;
-  let h='<div class="grid2"><div class="f" style="grid-column:1/-1"><label for="libq">Buscar</label><input id="libq" data-c="libq" value="'+esc(L.q)+'" placeholder="Ej. press banca, curl, zancada…" style="font-family:inherit;font-weight:500"></div>'
-    +'<div class="f"><label for="libg">Grupo</label><select id="libg" data-c="libg" style="font-family:inherit;font-weight:500"><option value="">Todos</option>'+GROUPS.map(x=>'<option'+(x===L.g?' selected':'')+'>'+esc(x)+'</option>').join('')+'</select></div>'
-    +'<div class="f"><label for="libeq">Material</label><select id="libeq" data-c="libeq" style="font-family:inherit;font-weight:500"><option value="">Todos</option>'+EQLIST.map(x=>'<option'+(x===L.eq?' selected':'')+'>'+esc(x)+'</option>').join('')+'</select></div></div>';
-  if(!exdbReady){h+='<p class="empty">Cargando la base de datos de ejercicios (hace falta conexión la primera vez)…</p>';return h}
+  let h='<div class="library-head"><div><b>Biblioteca inteligente</b><div class="sub">El nombre grande es el original del ejercicio. La traducción automática queda debajo solo como ayuda.</div></div></div>'
+    +'<div class="grid2"><div class="f" style="grid-column:1/-1"><label for="libq">Buscar ejercicio</label><input id="libq" data-c="libq" value="'+esc(L.q)+'" placeholder="Ej. bench press, curl, squat, press…" style="font-family:inherit;font-weight:500"></div>'
+    +'<div class="f"><label for="libg">Músculo objetivo</label><select id="libg" data-c="libg" style="font-family:inherit;font-weight:500"><option value="">Todos</option>'+GROUPS.map(x=>'<option value="'+esc(x)+'"'+(x===L.g?' selected':'')+'>'+esc(x)+'</option>').join('')+'</select></div>'
+    +'<div class="f"><label for="libkind">Tipo</label><select id="libkind" data-c="libkind" style="font-family:inherit;font-weight:500"><option value="">Todos</option><option value="i"'+(L.kind==='i'?' selected':'')+'>Aislamiento</option><option value="b"'+(L.kind==='b'?' selected':'')+'>Básico / compuesto</option></select></div>'
+    +'<div class="f"><label for="librole">Papel del músculo</label><select id="librole" data-c="librole" style="font-family:inherit;font-weight:500"><option value="rank"'+(L.role==='rank'?' selected':'')+'>Principal primero</option><option value="primary"'+(L.role==='primary'?' selected':'')+'>Solo músculo principal</option><option value="any"'+(L.role==='any'?' selected':'')+'>Principal o secundario</option></select></div>'
+    +'<div class="f"><label for="libeq">Material</label><select id="libeq" data-c="libeq" style="font-family:inherit;font-weight:500"><option value="">Todos</option>'+EQLIST.map(x=>'<option value="'+esc(x)+'"'+(x===L.eq?' selected':'')+'>'+esc(x)+'</option>').join('')+'</select></div></div>';
+  if(!exdbReady){h+='<p class="empty">Cargando la base de ejercicios…</p>';return h}
   const words=norm(L.q).split(/\s+/).filter(Boolean);
   let res=EXDB.filter(e=>{
-    if(L.g&&e.g.indexOf(L.g)<0)return false;
+    const main=primaryMuscle(e),sec=secondaryMuscles(e);
+    if(L.g){
+      if(L.role==='primary'&&main!==L.g)return false;
+      if((L.role==='any'||L.role==='rank')&&main!==L.g&&sec.indexOf(L.g)<0)return false;
+    }
+    if(L.kind&&e.k!==L.kind)return false;
     if(L.eq&&e.eq!==L.eq)return false;
-    if(!words.length)return true;
-    const hay=norm(e.name+' '+e.en);
-    return words.every(w=>hay.indexOf(w)>=0);
+    if(words.length){
+      const hay=norm(canonicalExName(e)+' '+(e.name||'')+' '+(e.g||[]).join(' ')+' '+(e.eq||''));
+      if(!words.every(w=>hay.indexOf(w)>=0))return false;
+    }
+    return true;
   });
-  const total=res.length;res=res.slice(0,25);
-  h+='<p class="sub">'+total+' resultados'+(total>25?' · se muestran los primeros 25, afina la búsqueda':'')+'</p>';
-  h+=res.length?res.map(libRow).join(''):'<p class="empty">Sin resultados con esos filtros.</p>';
+  res.sort((a,b)=>{
+    const ds=libraryScore(b,L)-libraryScore(a,L);
+    if(ds)return ds;
+    if(L.g){
+      const ap=primaryMuscle(a)===L.g?0:1,bp=primaryMuscle(b)===L.g?0:1;
+      if(ap!==bp)return ap-bp;
+    }
+    return canonicalExName(a).localeCompare(canonicalExName(b),'en');
+  });
+  const total=res.length,shown=res.slice(0,40);
+  if(L.g){
+    const p=res.filter(e=>primaryMuscle(e)===L.g).length,s=res.filter(e=>primaryMuscle(e)!==L.g&&secondaryMuscles(e).indexOf(L.g)>=0).length;
+    h+='<div class="lib-summary"><b>'+p+'</b> con '+esc(L.g)+' como músculo principal'+(L.role!=='primary'?' · <b>'+s+'</b> como secundario':'')+'</div>';
+  }else h+='<p class="sub">'+total+' ejercicios disponibles</p>';
+  h+=shown.length?shown.map(e=>libRow(e,L)).join(''):'<p class="empty">No hay ejercicios con esos filtros.</p>';
+  if(total>shown.length)h+='<p class="tip">Mostrando los primeros '+shown.length+' de '+total+'. Usa músculo, tipo, material o búsqueda para afinar.</p>';
   return h;
 }
-
 /* ---------- vistas: sesión ---------- */
 const CHK='<svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
 function seg(k,opts,cur){
@@ -761,7 +817,7 @@ function vDraft(){
   h+='<details class="card"><summary>Calentamiento (10 min)</summary><p class="sub">5 min de cardio suave y movilidad de hombro y cadera. Antes del primer básico haz 2-3 series de aproximación: ~50 %, 70 % y 85 % del peso de trabajo, con 5, 3 y 1 repeticiones.</p></details>';
   d.exercises.forEach((e,i)=>{
     const sg=suggest(e.id,e.reps,ph.rir);
-    h+='<section class="ex" data-e="'+i+'"><div class="row sp" style="align-items:flex-start"><div><h3>'+esc(e.name)+'</h3><div class="meta">'+e.sets.length+' × '+e.reps[0]+'-'+e.reps[1]+' · descanso '+(e.rest>=120?'2-3 min':e.rest>=75?'60-90 s':'~60 s')+' · '+esc(e.g)+'</div></div><div class="row" style="gap:6px"><button type="button" class="btn ghost sm swap-btn" data-act="swapopen" data-e="'+i+'">⇄ Cambiar</button>'+(e._swapOriginal?'<button type="button" class="btn ghost sm" data-act="swaprestore" data-e="'+i+'">↶ Original</button>':'')+'</div></div>'
+    h+='<section class="ex" data-e="'+i+'"><div class="row sp" style="align-items:flex-start"><div><h3>'+esc(e.name)+'</h3><div class="meta">'+e.sets.length+' × '+e.reps[0]+'-'+e.reps[1]+' · descanso '+(e.rest>=120?'2-3 min':e.rest>=75?'60-90 s':'~60 s')+' · '+esc(e.g)+'</div></div><div class="row" style="gap:6px"><button type="button" class="btn ghost sm swap-btn" data-act="swapopen" data-e="'+i+'">⇄ Cambiar</button>'+(e._swapOriginal?'<button type="button" class="btn ghost sm" data-act="swaprestore" data-e="'+i+'">↶ Original</button>':'')+armBtn('warn sm','removeex',String(i),'Quitar',((e.sets||[]).some(s=>s.done)?'Borrar series y quitar':'Confirmar quitar'))+'</div></div>'
       +swapPanel(e,i)
       +'<div class="tgt">'+esc(sg.text)+'</div>'
       +(sg.last?'<div class="last">Última vez ('+esc(fmtDate(sg.last.date,{weekday:undefined}))+'): '+sg.last.sets.map(x=>fmt(x.kg,2)+'×'+fmt(x.reps,0)+(x.rir!=null?' @'+fmt(x.rir,0):'')).join(' · ')+'</div>':'');
@@ -1155,6 +1211,11 @@ const ACT={
     state.templates.push({id:uid(),name:n,exercises:exs});
     persist();render();toast('Plantilla guardada');
   },
+  removeex(b){
+    const i=+b.dataset.id,d=state.draft;if(!d||!d.exercises[i])return;
+    const name=d.exercises[i].name;
+    d.exercises.splice(i,1);ui.swap=null;persist();render();toast('Eliminado: '+name);
+  },
   swapopen(b){
     const i=+b.dataset.e,e=state.draft&&state.draft.exercises[i];if(!e)return;
     if((e.sets||[]).some(s=>s.done)){toast('Cambia el ejercicio antes de completar series');return}
@@ -1167,10 +1228,10 @@ const ACT={
     if((old.sets||[]).some(s=>s.done)){toast('No puedo cambiarlo con series ya completadas');return}
     const ph=phaseOf(weekOf(d.date)),work=(old.sets||[]).filter(s=>!s.warmup).length||3,warm=(old.sets||[]).filter(s=>s.warmup).length;
     const original=old._swapOriginal||JSON.parse(JSON.stringify({id:old.id,name:old.name,g:old.g,reps:old.reps,rest:old.rest,k:old.k,note:old.note||''}));
-    const repl=mkExN({id:cand.id,name:cand.name,g:old.g,reps:old.reps,rest:old.rest,k:cand.k||old.k},work,ph.rir);
+    const repl=mkExN({id:cand.id,name:canonicalExName(cand),g:old.g,reps:old.reps,rest:old.rest,k:cand.k||old.k},work,ph.rir);
     for(let n=0;n<warm;n++)repl.sets.unshift({kg:'',reps:'',rir:'',warmup:true,done:false});
     repl.note=old.note||'';repl._swapOriginal=original;repl._swapFrom=old.name;
-    d.exercises[i]=repl;ui.swap=null;persist();render();toast('Cambiado por '+cand.name);
+    d.exercises[i]=repl;ui.swap=null;persist();render();toast('Cambiado por '+canonicalExName(cand));
   },
   swaprestore(b){
     const i=+b.dataset.e,d=state.draft,old=d&&d.exercises[i];if(!old||!old._swapOriginal)return;
@@ -1189,8 +1250,8 @@ const ACT={
     const reps=ex.k==='b'?[6,10]:ex.k==='i'?[10,15]:[8,12];
     const rest=ex.k==='b'?150:75;
     const g=(ex.g&&ex.g.length)?ex.g[0]:'Core';
-    state.draft.exercises.push(mkExN({id:ex.id,name:ex.name,g:g,reps:reps,rest:rest,k:ex.k||'i'},3,ph.rir));
-    persist();render();toast('Añadido: '+ex.name);
+    state.draft.exercises.push(mkExN({id:ex.id,name:canonicalExName(ex),g:g,reps:reps,rest:rest,k:ex.k||'i'},3,ph.rir));
+    persist();render();toast('Añadido: '+canonicalExName(ex));
   }
 };
 document.addEventListener('click',e=>{
@@ -1223,6 +1284,8 @@ const CHANGE={
   start(t){if(t.value){state.settings.startDate=t.value;persist();render()}},
   libq(t){ui.lib.q=t.value;render()},
   libg(t){ui.lib.g=t.value;render()},
+  libkind(t){ui.lib.kind=t.value;render()},
+  librole(t){ui.lib.role=t.value;render()},
   libeq(t){ui.lib.eq=t.value;render()}
 };
 document.addEventListener('change',e=>{const t=e.target;if(t.id==='import-json'){importBackup(t.files&&t.files[0]);t.value='';return}const c=t.dataset&&t.dataset.c;if(c&&CHANGE[c])CHANGE[c](t)});
