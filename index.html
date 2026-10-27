@@ -264,12 +264,13 @@ const PLAN={
     E('lat-raise','Elevaciones laterales','Hombro',3,[12,15],75,'i',1),
     E('tri-push','Extensión de tríceps en polea','Tríceps',2,[10,15],75,'i',0),
     E('curl-bi','Curl de bíceps','Bíceps',2,[10,15],75,'i',0)]},
-  PA:{name:'Pierna A',focus:'Cuádriceps, femoral y glúteo',ex:[
-    E('sq','Sentadilla (o prensa)','Cuádriceps',3,[6,10],150,'b',0),
+  PA:{name:'Pierna',focus:'Pierna completa · sesión principal',ex:[
+    E('sq','Sentadilla (o prensa)','Cuádriceps',4,[6,10],150,'b',0),
     E('rdl','Peso muerto rumano','Femoral y glúteo',3,[8,10],150,'b',0),
-    E('zanc','Prensa o zancadas','Cuádriceps',2,[10,12],120,'b',0),
+    E('zanc','Prensa o zancadas','Cuádriceps',3,[10,12],120,'b',0),
+    E('ext-cuad','Extensión de cuádriceps','Cuádriceps',3,[10,15],75,'i',0),
     E('curl-fem','Curl femoral','Femoral y glúteo',3,[10,12],75,'i',0),
-    E('gem','Gemelo','Gemelo',3,[10,15],60,'i',0),
+    E('gem','Gemelo','Gemelo',4,[10,15],60,'i',0),
     E('abs','Abdominales en polea','Core',2,[10,15],60,'i',0)]},
   TB:{name:'Torso B',focus:'Pecho, espalda y hombros',ex:[
     E('bench','Press plano (barra o máquina)','Pecho',3,[6,10],150,'b',1),
@@ -279,16 +280,25 @@ const PLAN={
     E('fly','Aperturas en polea','Pecho',2,[12,15],75,'i',1),
     E('curl-bi','Curl de bíceps','Bíceps',2,[10,15],75,'i',0),
     E('tri-oh','Extensión de tríceps por encima de la cabeza','Tríceps',2,[10,15],75,'i',0)]},
-  PB:{name:'Pierna B',focus:'Cuádriceps, glúteo y femoral',ex:[
+  PB:{name:'Pierna B',focus:'Sesión histórica',legacy:true,ex:[
     E('prensa','Prensa','Cuádriceps',3,[8,12],120,'b',0),
     E('hip','Hip thrust o peso muerto rumano','Femoral y glúteo',3,[8,12],120,'b',0),
     E('bulg','Sentadilla búlgara o hack','Cuádriceps',2,[8,12],120,'b',0),
     E('ext-cuad','Extensión de cuádriceps','Cuádriceps',3,[10,15],75,'i',0),
     E('curl-fem','Curl femoral','Femoral y glúteo',2,[10,15],75,'i',0),
     E('gem','Gemelo','Gemelo',3,[10,15],60,'i',0),
-    E('abs','Abdominales en polea','Core',2,[10,15],60,'i',0)]}
+    E('abs','Abdominales en polea','Core',2,[10,15],60,'i',0)]},
+  FB:{name:'Full Body',focus:'Torso prioritario + segundo estímulo de pierna',ex:[
+    E('prensa','Prensa','Cuádriceps',3,[8,12],120,'b',0),
+    E('inc-db','Press inclinado con mancuernas','Pecho',3,[6,10],150,'b',1),
+    E('row-sup','Remo con apoyo en pecho o máquina','Espalda',3,[8,12],120,'b',1),
+    E('lat-n','Jalón al pecho agarre neutro','Espalda',2,[8,12],120,'b',0),
+    E('lat-raise','Elevaciones laterales','Hombro',3,[12,20],75,'i',1),
+    E('curl-fem','Curl femoral','Femoral y glúteo',2,[10,15],75,'i',0),
+    E('curl-bi','Curl de bíceps','Bíceps',2,[10,15],75,'i',0),
+    E('tri-push','Extensión de tríceps en polea','Tríceps',2,[10,15],75,'i',0)]}
 };
-const ORDER=['TA','PA','TB','PB'];
+const ORDER=['TA','PA','TB','FB'];
 const GROUPS=['Pecho','Espalda','Hombro','Bíceps','Tríceps','Cuádriceps','Femoral y glúteo','Gemelo','Core'];
 const TG={ /* series semanales objetivo por fase (sem 1-2, 3-4, 5+) */
   'Pecho':[[6,10],[8,12],[12,16]],'Espalda':[[6,10],[8,12],[12,16]],'Hombro':[[6,10],[8,12],[12,18]],
@@ -312,7 +322,7 @@ const isoDow=s=>((new Date(utc(s)).getUTCDay()+6)%7)+1;
 
 /* ---------- estado y guardado ---------- */
 const LS_KEY='diario-entreno-v1';
-const APP_VERSION='2.4';
+const APP_VERSION='2.5';
 function defaultState(){
   return{v:2,updatedAt:0,
     settings:{startDate:today(),days:[1,2,4,5],t:{kcal:2350,prot:165,carb:265,fat:70,water:2.5,steps:9000,sleep:7.5}},
@@ -762,12 +772,16 @@ function armBtn(cls,act,id,label,confirmLabel){
   const on=ui.arm===act+':'+(id||'');
   return '<button type="button" class="btn '+cls+'" data-act="'+act+'" data-id="'+esc(id||'')+'" data-arm="1">'+(on?confirmLabel:label)+'</button>';
 }
+function sessionPlanName(s){
+  if(s&&s.type==='PB')return 'Pierna B';
+  return (PLAN[s&&s.type]||{name:s&&s.name||s&&s.type||'Sesión'}).name;
+}
 function vSesion(){return state.draft?vDraft():vStart()}
 
 function vStart(){
   const t=today(),w=weekOf(t),ph=phaseOf(w);
   const last=state.sessions[state.sessions.length-1];
-  const nextT=last?ORDER[(ORDER.indexOf(last.type)+1)%4]:'TA';
+  const nextT=last?(last.type==='PB'?'TA':ORDER[(Math.max(0,ORDER.indexOf(last.type))+1)%4]):'TA';
   if(!ui.type)ui.type=nextT;
   if(!ui.time)ui.time=new Date().getHours()<14?'10:00':'18:00';
   const wk=mondayOf(t),cnt=state.sessions.filter(s=>s.date>=wk).length;
@@ -797,7 +811,7 @@ function vStart(){
     h+='<div class="sec">Últimas sesiones</div>';
     h+=state.sessions.slice(-6).reverse().map(s=>{
       const sets=s.exercises.reduce((a,e)=>a+e.sets.length,0);
-      return '<details class="hist"><summary>'+esc(fmtDate(s.date))+' · '+esc((PLAN[s.type]||{name:s.name||s.type}).name)+' · '+sets+' series'+(s.dur?' · '+s.dur+' min':'')+'</summary><ul>'
+      return '<details class="hist"><summary>'+esc(fmtDate(s.date))+' · '+esc(sessionPlanName(s))+' · '+sets+' series'+(s.dur?' · '+s.dur+' min':'')+'</summary><ul>'
         +s.exercises.map(e=>'<li><b>'+esc(e.name)+'</b>: '+e.sets.map(x=>fmt(x.kg,2)+'×'+fmt(x.reps,0)+(x.rir!=null?' @'+fmt(x.rir,0):'')+(x.warmup?' A':'')).join(', ')+'</li>').join('')
         +(s.rpe?'<li>Esfuerzo global: '+fmt(s.rpe,0)+'/10</li>':'')+(s.notes?'<li>'+esc(s.notes)+'</li>':'')+'</ul>'
         +'<div style="margin-bottom:10px">'+armBtn('warn sm','delsess',s.id,'Borrar sesión','¿Seguro? Toca otra vez')+'</div></details>';
@@ -1071,7 +1085,7 @@ function vPlan(){
     +'<div class="f" style="margin-top:8px"><label for="startd">Inicio del plan</label><input id="startd" type="date" data-c="start" value="'+esc(state.settings.startDate)+'"></div></div>';
   h+='<div class="sec">Días de entrenamiento</div><div class="seg" role="group">'
     +DOWN.map((l,i)=>'<button type="button" class="'+(days.indexOf(i+1)>=0?'on':'')+'" data-act="dayset" data-d="'+(i+1)+'" aria-pressed="'+(days.indexOf(i+1)>=0)+'" aria-label="'+['lunes','martes','miércoles','jueves','viernes','sábado','domingo'][i]+'">'+l+'</button>').join('')+'</div>'
-    +'<p class="tip">'+days.length+' días por semana. Las sesiones rotan Torso A, Pierna A, Torso B, Pierna B.'+(days.length!==4?' El plan está pensado para 4 días.':'')+'</p>';
+    +'<p class="tip">'+days.length+' días por semana. Las sesiones rotan Torso A, Pierna, Torso B y Full Body.'+(days.length!==4?' El plan está pensado para 4 días.':'')+'</p>';
   h+='<div class="sec">Series por grupo y sesión</div><p class="tip">Semana '+w+'. Cada grupo se trabaja en dos sesiones distintas por semana.</p><table><thead><tr><th>Grupo</th>'
     +ORDER.map(k=>'<th>'+PLAN[k].name.replace('Torso ','T-').replace('Pierna ','P-')+'</th>').join('')+'<th>Total</th></tr></thead><tbody>'
     +GROUPS.map(g=>{const c=ORDER.map(k=>PLAN[k].ex.filter(e=>e.g===g).reduce((a,e)=>a+setsFor(e,w),0));const tot=c.reduce((a,b)=>a+b,0);
@@ -1135,7 +1149,7 @@ function doExport(w){
   if(w==='json')return exportFile('diario-entreno-copia.json',JSON.stringify(state,null,1));
   if(w==='sess'){
     const r=[['fecha','sesion','semana','ejercicio','serie','kg','reps','rir','aproximacion']];
-    state.sessions.forEach(s=>s.exercises.forEach(e=>e.sets.forEach((x,i)=>r.push([s.date,(PLAN[s.type]||{name:s.name||s.type}).name,s.week,e.name,i+1,x.kg,x.reps,x.rir,x.warmup?'si':'no']))));
+    state.sessions.forEach(s=>s.exercises.forEach(e=>e.sets.forEach((x,i)=>r.push([s.date,sessionPlanName(s),s.week,e.name,i+1,x.kg,x.reps,x.rir,x.warmup?'si':'no']))));
     return exportFile('sesiones.csv','\ufeff'+r.map(a=>a.map(csvCell).join(',')).join('\n'));
   }
   const r=[['fecha','peso_kg','cintura_cm','grasa_pct','visceral','musculo_kg','agua_pct','pecho_cm','brazo_cm','muslo_cm','cadera_cm','nota']];
