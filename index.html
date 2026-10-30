@@ -350,9 +350,43 @@ function generatePlanFromAnswers(a){
   // Priority: add one set flag to matching group.
   const pm={'Pecho':'Pecho','Espalda':'Espalda','Hombros':'Hombro','Piernas':'Cuádriceps','Glúteos':'Femoral y glúteo','Brazos':'Bíceps'};
   const pg=pm[priority];if(pg)Object.values(sessions).forEach(s=>s.ex.forEach(e=>{if(e.g===pg)e.prio=true}));
+  // Goal changes the rep/rest emphasis without changing the exercise identity.
+  if(goal==='Fuerza')Object.values(sessions).forEach(s=>s.ex.forEach(e=>{if(e.k==='b'){e.reps=[4,8];e.rest=Math.max(e.rest,180)}}));
+  // Recovery context: conservative volume when sleep/cardio/return from layoff makes recovery harder.
+  const lowRecovery=(+a.sleep||7)<=6 || a.cardio==='3+ días/semana' || /más de 3 meses/i.test(a.break||'');
+  if(lowRecovery)Object.values(sessions).forEach(s=>s.ex.forEach(e=>{e.sets=Math.max(2,(e.sets||3)-1)}));
+  // Equipment adaptation. Keep familiar patterns but replace clearly unavailable machine/cable work.
+  const eq=a.equipment||'Gimnasio completo';
+  if(eq==='Casa con mancuernas'||eq==='Material mínimo'){
+    const repl={
+      'lat-n':generatedExercise('home-row','Remo con mancuerna','Espalda',3,[8,15],90,'b',1),
+      'row-sup':generatedExercise('home-row2','Remo con mancuernas apoyado','Espalda',3,[8,15],90,'b',1),
+      'row-db':generatedExercise('home-row3','Remo unilateral con mancuerna','Espalda',3,[8,15],90,'b',1),
+      'tri-push':generatedExercise('home-tri','Extensión de tríceps con mancuerna','Tríceps',2,[10,15],75,'i',0),
+      'fly':generatedExercise('home-fly','Aperturas con mancuernas','Pecho',2,[10,15],75,'i',1),
+      'ext-cuad':generatedExercise('home-split','Sentadilla dividida','Cuádriceps',2,[10,15],90,'b',0),
+      'curl-fem':generatedExercise('home-legcurl','Curl femoral deslizante','Femoral y glúteo',2,[10,15],75,'i',0)
+    };
+    Object.values(sessions).forEach(s=>{s.ex=s.ex.map(e=>repl[e.id]?cloneE(repl[e.id]):e)});
+  }
+  // Conservative avoidance from explicitly named problem areas. This is not a diagnosis.
+  const lim=norm(a.limitations||'');
+  const avoid=e=>{
+    const t=norm((e.id||'')+' '+(e.name||''));
+    if(/femoral|isquio/.test(lim)&&(/rdl|rumano|curl-fem|legcurl/.test(t)))return true;
+    if(/hombro/.test(lim)&&(/ohp|militar|overhead press/.test(t)))return true;
+    if(/rodilla/.test(lim)&&(/zanc|bulg|sentadilla dividida/.test(t)))return true;
+    if(/lumbar|espalda baja/.test(lim)&&(/rdl|rumano|peso muerto/.test(t)))return true;
+    return false;
+  };
+  if(lim)Object.values(sessions).forEach(s=>{s.ex=s.ex.filter(e=>!avoid(e))});
   const daysMap={2:[1,4],3:[1,3,5],4:[1,2,4,5],5:[1,2,3,5,6],6:[1,2,3,4,5,6]};
   const structure=days===2?'Full Body x2':days===3?'Full Body x3':days===4?(/pierna|glute|glúte/i.test(priority)?'Upper / Lower x2':'Torso / Pierna / Torso / Full Body corrector'):days===5?'Push / Pull / Legs / Torso / Pierna':'Push / Pull / Legs x2';
-  return{order,sessions,days:daysMap[days],structure,goal,priority,minutes:mins,reason:'Elegido por '+days+' días disponibles, objetivo '+goal.toLowerCase()+', sesiones de '+mins+' min y prioridad '+priority.toLowerCase()+'.'};
+  const reasons=[''+days+' días disponibles','objetivo '+goal.toLowerCase(),'sesiones de '+mins+' min','prioridad '+priority.toLowerCase()];
+  if(lowRecovery)reasons.push('volumen inicial conservador por recuperación');
+  if(eq!=='Gimnasio completo')reasons.push('adaptado a '+eq.toLowerCase());
+  if(lim)reasons.push('evitando movimientos asociados a las limitaciones indicadas');
+  return{order,sessions,days:daysMap[days],structure,goal,priority,minutes:mins,recovery:lowRecovery?'conservadora':'normal',reason:'Plan elegido por '+reasons.join(', ')+'.'};
 }
 const GROUPS=['Pecho','Espalda','Hombro','Bíceps','Tríceps','Cuádriceps','Femoral y glúteo','Gemelo','Core'];
 const TG={ /* series semanales objetivo por fase (sem 1-2, 3-4, 5+) */
@@ -1324,7 +1358,7 @@ function vPlan(){
     +'<div class="f" style="margin-top:8px"><label for="startd">Inicio del plan</label><input id="startd" type="date" data-c="start" value="'+esc(state.settings.startDate)+'"></div></div>';
   h+='<div class="sec">Días de entrenamiento</div><div class="seg" role="group">'
     +DOWN.map((l,i)=>'<button type="button" class="'+(days.indexOf(i+1)>=0?'on':'')+'" data-act="dayset" data-d="'+(i+1)+'" aria-pressed="'+(days.indexOf(i+1)>=0)+'" aria-label="'+['lunes','martes','miércoles','jueves','viernes','sábado','domingo'][i]+'">'+l+'</button>').join('')+'</div>'
-    +'<p class="tip">'+days.length+' días por semana. Las sesiones rotan Torso A, Pierna, Torso B y Full Body. El Full Body se genera de forma adaptativa según las subzonas menos trabajadas de esa semana.'+(days.length!==4?' El plan está pensado para 4 días.':'')+'</p>';
+    +'<p class="tip">'+days.length+' días por semana · '+esc(state.settings.customPlan&&state.settings.customPlan.structure?state.settings.customPlan.structure:'Torso A / Pierna / Torso B / Full Body')+'. '+(ord.indexOf('FB')>=0?'El Full Body se genera de forma adaptativa según las subzonas menos trabajadas de esa semana.':'')+'</p>';
   h+='<div class="sec">Series por grupo y sesión</div><p class="tip">Semana '+w+'. Cada grupo se trabaja en dos sesiones distintas por semana.</p><table><thead><tr><th>Grupo</th>'
     +ord.map(k=>'<th>'+pmap[k].name.replace('Torso ','T-').replace('Pierna ','P-')+'</th>').join('')+'<th>Total</th></tr></thead><tbody>'
     +GROUPS.map(g=>{const c=ord.map(k=>pmap[k].ex.filter(e=>e.g===g).reduce((a,e)=>a+setsFor(e,w),0));const tot=c.reduce((a,b)=>a+b,0);
@@ -1366,7 +1400,7 @@ function onboardingPreview(){
   const a=ui.onboard.answers,p=generatePlanFromAnswers(a);
   return '<div class="proposal"><span class="tag">Propuesta</span><h2>'+esc(p.structure)+'</h2><p class="sub">'+esc(p.reason)+'</p><div class="profile-kpis"><div><b>'+p.order.length+'</b><span>días</span></div><div><b>'+esc(String(p.minutes))+'</b><span>min aprox.</span></div><div><b>'+esc(a.experience)+'</b><span>nivel</span></div></div>'
     +p.order.map((k,i)=>'<div class="proposal-day"><b>Día '+(i+1)+' · '+esc(p.sessions[k].name)+'</b><span>'+esc(p.sessions[k].focus)+'</span><small>'+p.sessions[k].ex.length+' ejercicios</small></div>').join('')
-    +'<div class="advice"><b>Por qué:</b> '+esc(p.reason)+' La selección de ejercicios podrá seguir adaptándose con sustituciones, subzonas y progresión.</div></div>';
+    +'<div class="advice"><b>Por qué:</b> '+esc(p.reason)+' La selección de ejercicios podrá seguir adaptándose con sustituciones, subzonas y progresión.</div>'+(a.limitations?'<div class="advice warn"><b>Limitaciones indicadas:</b> '+esc(a.limitations)+'. El generador evita de forma conservadora algunos movimientos relacionados, pero no sustituye una valoración sanitaria.</div>':'')+'</div>';
 }
 function vOnboarding(){
   const o=ui.onboard,a=o.answers,s=o.step;
@@ -1384,13 +1418,14 @@ function createProfileFromOnboard(){
   if(o.mode==='block'){
     const p=activeProfile();if(!p)return;
     state.settings.customPlan={order:gp.order,sessions:gp.sessions,structure:gp.structure,reason:gp.reason};
+    state.settings.trainingContext={experience:a.experience,goal:a.goal,break:a.break,activity:a.activity,sleep:a.sleep,cardio:a.cardio,equipment:a.equipment,limitations:a.limitations};
     state.settings.days=gp.days;state.settings.startDate=today();
     p.answers=Object.assign({},p.answers||{},a);p.planMeta={source:'generated',label:gp.structure,reason:gp.reason,createdAt:Date.now()};
     ui.onboard=null;ui.type=null;persist();render();toast('Nuevo bloque aplicado');return;
   }
   syncActiveProfile();
   const fresh=defaultState(),pid='p-'+uid();
-  fresh.settings.days=gp.days;fresh.settings.startDate=today();fresh.settings.customPlan={order:gp.order,sessions:gp.sessions,structure:gp.structure,reason:gp.reason};
+  fresh.settings.days=gp.days;fresh.settings.startDate=today();fresh.settings.customPlan={order:gp.order,sessions:gp.sessions,structure:gp.structure,reason:gp.reason};fresh.settings.trainingContext={experience:a.experience,goal:a.goal,break:a.break,activity:a.activity,sleep:a.sleep,cardio:a.cardio,equipment:a.equipment,limitations:a.limitations};
   if(a.weight)fresh.body=[{date:today(),weight:+a.weight||null,waist:null,fat:null,visceral:null,muscle:null,water:null,chest:null,arm:null,thigh:null,hips:null,note:'Peso inicial del perfil'}];
   const profile={id:pid,name:(a.name||'Nuevo perfil').trim(),createdAt:Date.now(),updatedAt:Date.now(),answers:a,planMeta:{source:'generated',label:gp.structure,reason:gp.reason,createdAt:Date.now()},data:dataSnapshot(fresh)};
   state.profiles.push(profile);state.activeProfileId=pid;applyProfileData(profile.data);ui.onboard=null;ui.tab='sesion';ui.type=null;persist();render();window.scrollTo(0,0);toast('Perfil creado');
