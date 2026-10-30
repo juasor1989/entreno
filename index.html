@@ -216,6 +216,11 @@ nav{left:10px;right:10px;bottom:10px;border-radius:22px;padding:4px;padding-bott
 .muscle-detail{margin-top:12px}.zone-list{margin-top:12px}.zone-row{margin:10px 0}.zone-row>.row span:first-child{font-size:13px}.zone-row .bar{margin-top:5px}
 .muscle-detail table td:first-child{line-height:1.25}.muscle-detail .tag{white-space:nowrap}
 </style>
+<style id="adaptive-fb-v27">
+.fb-corrector{border-color:rgba(166,211,79,.18);background:linear-gradient(135deg,rgba(166,211,79,.08),rgba(131,189,240,.05))}
+.fb-needs{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}.fb-needs span{font-size:12px;padding:6px 8px;border-radius:11px;background:rgba(255,255,255,.045);color:var(--mut)}.fb-needs b{color:var(--ink)}.fb-needs em{font-style:normal;color:#dff1bd}
+.adaptive-note{margin:8px 0;padding:8px 10px;border-radius:12px;background:rgba(166,211,79,.075);border-left:3px solid var(--ac);font-size:13px;color:#d7e0da}
+</style>
 </head>
 <body>
 <div class="wrap">
@@ -293,15 +298,14 @@ const PLAN={
     E('curl-fem','Curl femoral','Femoral y glúteo',2,[10,15],75,'i',0),
     E('gem','Gemelo','Gemelo',3,[10,15],60,'i',0),
     E('abs','Abdominales en polea','Core',2,[10,15],60,'i',0)]},
-  FB:{name:'Full Body',focus:'Torso prioritario + segundo estímulo de pierna',ex:[
-    E('prensa','Prensa','Cuádriceps',3,[8,12],120,'b',0),
-    E('inc-db','Press inclinado con mancuernas','Pecho',3,[6,10],150,'b',1),
-    E('row-sup','Remo con apoyo en pecho o máquina','Espalda',3,[8,12],120,'b',1),
-    E('lat-n','Jalón al pecho agarre neutro','Espalda',2,[8,12],120,'b',0),
-    E('lat-raise','Elevaciones laterales','Hombro',3,[12,20],75,'i',1),
-    E('curl-fem','Curl femoral','Femoral y glúteo',2,[10,15],75,'i',0),
+  FB:{name:'Full Body',focus:'Corrector semanal · completa las subzonas menos trabajadas',ex:[
+    E('fb-chest-low','Fondos asistidos o press declinado','Pecho',3,[8,12],120,'b',1),
+    E('row-db','Remo con mancuerna o polea baja','Espalda',3,[8,12],120,'b',1),
+    E('face','Face pull o pájaros','Hombro',3,[12,15],75,'i',1),
+    E('ext-cuad','Extensión de cuádriceps','Cuádriceps',2,[10,15],75,'i',0),
+    E('hip','Hip thrust','Femoral y glúteo',2,[8,12],120,'b',0),
     E('curl-bi','Curl de bíceps','Bíceps',2,[10,15],75,'i',0),
-    E('tri-push','Extensión de tríceps en polea','Tríceps',2,[10,15],75,'i',0)]}
+    E('tri-oh','Extensión de tríceps por encima de la cabeza','Tríceps',2,[10,15],75,'i',0)]}
 };
 const ORDER=['TA','PA','TB','FB'];
 const GROUPS=['Pecho','Espalda','Hombro','Bíceps','Tríceps','Cuádriceps','Femoral y glúteo','Gemelo','Core'];
@@ -327,7 +331,7 @@ const isoDow=s=>((new Date(utc(s)).getUTCDay()+6)%7)+1;
 
 /* ---------- estado y guardado ---------- */
 const LS_KEY='diario-entreno-v1';
-const APP_VERSION='2.6';
+const APP_VERSION='2.7';
 function defaultState(){
   return{v:2,updatedAt:0,
     settings:{startDate:today(),days:[1,2,4,5],t:{kcal:2350,prot:165,carb:265,fat:70,water:2.5,steps:9000,sleep:7.5}},
@@ -528,10 +532,90 @@ function suggest(id,reps,targetRir){
   if(avgRir!=null && avgRir>=targetLo+2)return{kg:kg,last:last,text:'Te sobró margen (RIR medio '+fmt(avgRir,1)+'). Mantén '+fmt(kg,2)+' kg y aumenta repeticiones antes de subir carga.'};
   return{kg:kg,last:last,text:'Mantén '+fmt(kg,2)+' kg y busca mejorar 1-2 repeticiones totales respetando RIR '+targetRir+'.'};
 }
+/* ---------- Full Body adaptativo por subzonas ---------- */
+const FB_ZONE_POOL={
+  'Pecho':{
+    'Superior':E('inc-db','Press inclinado con mancuernas','Pecho',3,[6,10],150,'b',1),
+    'Medio':E('bench','Press plano (barra o máquina)','Pecho',3,[6,10],150,'b',1),
+    'Inferior':E('fb-chest-low','Fondos asistidos o press declinado','Pecho',3,[8,12],120,'b',1)
+  },
+  'Espalda':{
+    'Tirón vertical / dorsales':E('lat-n','Jalón al pecho agarre neutro','Espalda',3,[8,12],120,'b',1),
+    'Remo / espalda media':E('row-db','Remo con mancuerna o polea baja','Espalda',3,[8,12],120,'b',1),
+    'Trapecio y escápulas':E('fb-upperback','Remo alto en polea o máquina','Espalda',3,[10,15],90,'b',1)
+  },
+  'Hombro':{
+    'Anterior':E('ohp','Press militar sentado','Hombro',2,[8,10],120,'b',0),
+    'Lateral':E('lat-raise','Elevaciones laterales','Hombro',3,[12,20],75,'i',1),
+    'Posterior':E('face','Face pull o pájaros','Hombro',3,[12,15],75,'i',1)
+  },
+  'Cuádriceps':{
+    'Compuesto dominante de rodilla':E('prensa','Prensa','Cuádriceps',3,[8,12],120,'b',0),
+    'Extensión aislada':E('ext-cuad','Extensión de cuádriceps','Cuádriceps',2,[10,15],75,'i',0)
+  },
+  'Femoral y glúteo':{
+    'Femoral / bisagra':E('rdl','Peso muerto rumano','Femoral y glúteo',2,[8,10],150,'b',0),
+    'Glúteo':E('hip','Hip thrust','Femoral y glúteo',2,[8,12],120,'b',0),
+    'Curl femoral':E('curl-fem','Curl femoral','Femoral y glúteo',2,[10,15],75,'i',0)
+  },
+  'Bíceps':{
+    'Bíceps general':E('curl-bi','Curl de bíceps','Bíceps',2,[10,15],75,'i',0),
+    'Braquial / martillo':E('fb-hammer','Curl martillo','Bíceps',2,[10,15],75,'i',0)
+  },
+  'Tríceps':{
+    'Cabeza larga':E('tri-oh','Extensión de tríceps por encima de la cabeza','Tríceps',2,[10,15],75,'i',0),
+    'Lateral / medial':E('tri-push','Extensión de tríceps en polea','Tríceps',2,[10,15],75,'i',0)
+  }
+};
+function weekCompletedBefore(date){
+  const from=mondayOf(date);
+  return state.sessions.filter(s=>s.date>=from&&s.date<date);
+}
+function weeklyZoneLoadBefore(date){
+  const out={};
+  GROUPS.forEach(g=>{out[g]={};(MUSCLE_ZONES[g]||['General']).forEach(z=>out[g][z]=0)});
+  weekCompletedBefore(date).forEach(s=>(s.exercises||[]).forEach(e=>{
+    const n=(e.sets||[]).filter(x=>!x.warmup).length;if(!n)return;
+    const z=zoneForExercise(e);if(!out[e.g])out[e.g]={};out[e.g][z]=(out[e.g][z]||0)+n;
+  }));
+  return out;
+}
+function usedExerciseIdsBefore(date){
+  const ids=new Set();weekCompletedBefore(date).forEach(s=>(s.exercises||[]).forEach(e=>ids.add(e.id)));return ids;
+}
+function leastWorkedZone(group,loads){
+  const zones=MUSCLE_ZONES[group]||[],vals=zones.map((z,i)=>({z,n:(loads[group]&&loads[group][z])||0,i}));
+  vals.sort((a,b)=>a.n-b.n||a.i-b.i);return vals[0]||{z:'General',n:0};
+}
+function adaptiveFullBody(date){
+  const loads=weeklyZoneLoadBefore(date),used=usedExerciseIdsBefore(date),selected=[];
+  const groups=['Pecho','Espalda','Hombro','Cuádriceps','Femoral y glúteo','Bíceps','Tríceps'];
+  groups.forEach(g=>{
+    const pool=FB_ZONE_POOL[g]||{},zones=(MUSCLE_ZONES[g]||[]).map((z,i)=>({z,n:(loads[g]&&loads[g][z])||0,i})).sort((a,b)=>a.n-b.n||a.i-b.i);
+    let pick=null,why=null;
+    for(const q of zones){
+      const cand=pool[q.z];
+      if(cand&&!used.has(cand.id)){pick=cand;why=q;break}
+    }
+    if(!pick){
+      for(const q of zones){if(pool[q.z]){pick=pool[q.z];why=q;break}}
+    }
+    if(pick){
+      const ex=Object.assign({},pick,{_adaptive:true,_zone:why.z,_before:why.n});
+      selected.push(ex);
+    }
+  });
+  return selected;
+}
+function fbPreview(date){
+  const ex=adaptiveFullBody(date),loads=weeklyZoneLoadBefore(date);
+  return ex.map(e=>({ex:e,zone:e._zone,before:e._before,total:(loads[e.g]&&Object.values(loads[e.g]).reduce((a,b)=>a+b,0))||0}));
+}
+
 function mkExN(e,n,rir){
   const sg=suggest(e.id,e.reps,rir);
   const kg=sg.kg!=null?String(sg.kg).replace('.',','):'';
-  return{id:e.id,name:e.name,g:e.g,reps:e.reps,rest:e.rest,k:e.k,note:'',
+  return{id:e.id,name:e.name,g:e.g,reps:e.reps,rest:e.rest,k:e.k,note:'',_zone:e._zone||null,_adaptive:!!e._adaptive,
     sets:Array.from({length:n},()=>({kg:kg,reps:'',rir:'',warmup:false,done:false}))};
 }
 function mkEx(e,w,rir){return mkExN(e,setsFor(e,w),rir)}
@@ -542,9 +626,10 @@ function startManual(name,fromTpl){
   persist();render();window.scrollTo(0,0);
 }
 function startSession(type,time){
-  const t=today(),w=weekOf(t),ph=phaseOf(w);
+  const t=today(),w=weekOf(t),ph=phaseOf(w),base=type==='FB'?adaptiveFullBody(t):PLAN[type].ex;
   state.draft={id:uid(),date:t,type:type,time:time,startedAt:Date.now(),notes:'',rpe:'',dur:'',readiness:{energy:'',fatigue:'',soreness:'',stress:'',sleepq:''},
-    exercises:PLAN[type].ex.map(e=>mkEx(e,w,ph.rir))};
+    exercises:base.map(e=>mkEx(e,w,ph.rir))};
+  if(type==='FB')state.draft.fbAdaptive=base.map(e=>({id:e.id,g:e.g,zone:e._zone,before:e._before}));
   persist();render();window.scrollTo(0,0);
 }
 function finishSession(){
@@ -855,7 +940,7 @@ function vStart(){
   if(!ui.type)ui.type=nextT;
   if(!ui.time)ui.time=new Date().getHours()<14?'10:00':'18:00';
   const wk=mondayOf(t),cnt=state.sessions.filter(s=>s.date>=wk).length;
-  const plan=PLAN[ui.type];
+  const plan=PLAN[ui.type],previewEx=ui.type==='FB'?adaptiveFullBody(t):plan.ex;
   let h='<div class="hero"><div class="sub">Semana '+w+' · '+ph.n+' · RIR '+ph.rir+'</div><div class="big">'+esc(plan.name)+'</div><div class="sub">'+esc(plan.focus)+'</div>'
     +'<div class="dots" aria-label="'+cnt+' de 4 sesiones esta semana">'+[0,1,2,3].map(i=>'<i class="'+(i<cnt?'on':'')+'"></i>').join('')+'</div><div class="sub">'+cnt+' de 4 sesiones esta semana</div></div>';
   h+='<div class="f"><label>Sesión</label>'+seg('type',ORDER.map(k=>[k,PLAN[k].name,k===nextT?'toca':'']),ui.type)+'</div>';
@@ -863,8 +948,9 @@ function vStart(){
   h+='<p class="tip">'+(ui.time==='10:00'
     ?'Desayuno completo 2-3 h antes (30-40 g de proteína + hidratos). Tras entrenar, comida completa en 1-2 h.'
     :'Comida con proteína e hidratos ~3 h antes y algo ligero con hidratos 60-90 min antes. Cena con ~40 g de proteína al terminar.')+'</p>';
-  h+='<details class="card"><summary>Ejercicios de hoy ('+plan.ex.length+')</summary><table><tbody>'
-    +plan.ex.map(e=>'<tr><td>'+esc(e.name)+'</td><td class="num" style="text-align:right;white-space:nowrap">'+setsFor(e,w)+' × '+e.reps[0]+'-'+e.reps[1]+'</td></tr>').join('')+'</tbody></table></details>';
+  h+='<details class="card"><summary>Ejercicios de hoy ('+previewEx.length+')</summary><table><tbody>'
+    +previewEx.map(e=>'<tr><td>'+esc(e.name)+(ui.type==='FB'&&e._zone?'<div class="sub">Prioriza: '+esc(e._zone)+' · antes '+e._before+' series</div>':'')+'</td><td class="num" style="text-align:right;white-space:nowrap">'+setsFor(e,w)+' × '+e.reps[0]+'-'+e.reps[1]+'</td></tr>').join('')+'</tbody></table></details>';
+  if(ui.type==='FB'){const pv=fbPreview(t);h+='<div class="card fb-corrector"><div class="row sp"><b>Full Body corrector</b><span class="tag">automático</span></div><p class="sub">He comparado las subzonas que ya has trabajado esta semana. Este día prioriza las menos cubiertas y evita repetir ejercicios usados antes siempre que haya alternativa.</p><div class="fb-needs">'+pv.map(x=>'<span><b>'+esc(x.ex.g)+'</b> · '+esc(x.zone)+' <em>'+x.before+' series previas</em></span>').join('')+'</div></div>';} 
   h+='<button type="button" class="btn block" data-act="start" style="margin-top:6px">Empezar sesión</button>';
   h+='<button type="button" class="btn ghost block" data-act="manual" style="margin-top:8px">+ Sesión manual (elige tú los ejercicios)</button>';
   if(state.templates.length){
@@ -903,6 +989,7 @@ function vDraft(){
     const sg=suggest(e.id,e.reps,ph.rir);
     h+='<section class="ex" data-e="'+i+'"><div class="row sp" style="align-items:flex-start"><div><h3>'+esc(e.name)+'</h3><div class="meta">'+e.sets.length+' × '+e.reps[0]+'-'+e.reps[1]+' · descanso '+(e.rest>=120?'2-3 min':e.rest>=75?'60-90 s':'~60 s')+' · '+esc(e.g)+'</div></div><div class="row" style="gap:6px"><button type="button" class="btn ghost sm swap-btn" data-act="swapopen" data-e="'+i+'">⇄ Cambiar</button>'+(e._swapOriginal?'<button type="button" class="btn ghost sm" data-act="swaprestore" data-e="'+i+'">↶ Original</button>':'')+armBtn('warn sm','removeex',String(i),'Quitar',((e.sets||[]).some(s=>s.done)?'Borrar series y quitar':'Confirmar quitar'))+'</div></div>'
       +swapPanel(e,i)
+      +(e._adaptive&&e._zone?'<div class="adaptive-note"><b>Objetivo del Full Body:</b> '+esc(e._zone)+' era una de las subzonas menos trabajadas esta semana.</div>':'')
       +'<div class="tgt">'+esc(sg.text)+'</div>'
       +(sg.last?'<div class="last">Última vez ('+esc(fmtDate(sg.last.date,{weekday:undefined}))+'): '+sg.last.sets.map(x=>fmt(x.kg,2)+'×'+fmt(x.reps,0)+(x.rir!=null?' @'+fmt(x.rir,0):'')).join(' · ')+'</div>':'');
     e.sets.forEach((s,j)=>{
@@ -1156,7 +1243,7 @@ function vPlan(){
     +'<div class="f" style="margin-top:8px"><label for="startd">Inicio del plan</label><input id="startd" type="date" data-c="start" value="'+esc(state.settings.startDate)+'"></div></div>';
   h+='<div class="sec">Días de entrenamiento</div><div class="seg" role="group">'
     +DOWN.map((l,i)=>'<button type="button" class="'+(days.indexOf(i+1)>=0?'on':'')+'" data-act="dayset" data-d="'+(i+1)+'" aria-pressed="'+(days.indexOf(i+1)>=0)+'" aria-label="'+['lunes','martes','miércoles','jueves','viernes','sábado','domingo'][i]+'">'+l+'</button>').join('')+'</div>'
-    +'<p class="tip">'+days.length+' días por semana. Las sesiones rotan Torso A, Pierna, Torso B y Full Body.'+(days.length!==4?' El plan está pensado para 4 días.':'')+'</p>';
+    +'<p class="tip">'+days.length+' días por semana. Las sesiones rotan Torso A, Pierna, Torso B y Full Body. El Full Body se genera de forma adaptativa según las subzonas menos trabajadas de esa semana.'+(days.length!==4?' El plan está pensado para 4 días.':'')+'</p>';
   h+='<div class="sec">Series por grupo y sesión</div><p class="tip">Semana '+w+'. Cada grupo se trabaja en dos sesiones distintas por semana.</p><table><thead><tr><th>Grupo</th>'
     +ORDER.map(k=>'<th>'+PLAN[k].name.replace('Torso ','T-').replace('Pierna ','P-')+'</th>').join('')+'<th>Total</th></tr></thead><tbody>'
     +GROUPS.map(g=>{const c=ORDER.map(k=>PLAN[k].ex.filter(e=>e.g===g).reduce((a,e)=>a+setsFor(e,w),0));const tot=c.reduce((a,b)=>a+b,0);
